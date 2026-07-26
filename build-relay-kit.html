@@ -1,0 +1,397 @@
+<title>Build Relay Kit — Compton Tech Week</title>
+<style>
+  :root {
+    --paper: #faf7f2;
+    --card: #ffffff;
+    --ink: #211c16;
+    --ink-soft: #5c5346;
+    --line: #e7ded1;
+    --kick: #e8590c;
+    --snare: #d6206a;
+    --hat: #0e9bb0;
+    --lime: #6a9a10;
+    --violet: #8b3fd6;
+    --accent: var(--kick);
+    --code-bg: #2a2119;
+    --code-ink: #f5ede0;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #17130e;
+      --card: #211a13;
+      --ink: #f4ede2;
+      --ink-soft: #b6a891;
+      --line: #362a1e;
+      --kick: #ff8a3d;
+      --snare: #ff4d8f;
+      --hat: #3fd0e4;
+      --lime: #a3e635;
+      --violet: #c48cff;
+      --code-bg: #0e0a06;
+      --code-ink: #f5ede0;
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #faf7f2; --card: #ffffff; --ink: #211c16; --ink-soft: #5c5346;
+    --line: #e7ded1; --kick: #e8590c; --snare: #d6206a; --hat: #0e9bb0;
+    --lime: #6a9a10; --violet: #8b3fd6; --code-bg: #2a2119; --code-ink: #f5ede0;
+  }
+  :root[data-theme="dark"] {
+    --paper: #17130e; --card: #211a13; --ink: #f4ede2; --ink-soft: #b6a891;
+    --line: #362a1e; --kick: #ff8a3d; --snare: #ff4d8f; --hat: #3fd0e4;
+    --lime: #a3e635; --violet: #c48cff; --code-bg: #0e0a06; --code-ink: #f5ede0;
+  }
+
+  * { box-sizing: border-box; }
+
+  #doc {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+    padding: clamp(18px, 4vw, 44px) 16px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    -webkit-text-size-adjust: 100%;
+  }
+  .sheet { width: 100%; max-width: 760px; }
+
+  /* header */
+  .masthead {
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 30px;
+    background: var(--card);
+  }
+  .masthead .bar { height: 10px; display: flex; }
+  .masthead .bar span { flex: 1; }
+  .masthead .inner { padding: 22px clamp(18px, 4vw, 30px) 24px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase;
+    font-weight: 800; color: var(--accent); margin: 0 0 8px;
+  }
+  h1 {
+    margin: 0 0 8px; font-size: clamp(28px, 6vw, 44px); line-height: 1.05;
+    letter-spacing: -0.02em; font-weight: 900; text-wrap: balance;
+  }
+  .masthead p { margin: 0; color: var(--ink-soft); font-size: 15px; max-width: 56ch; }
+
+  .part-label {
+    display: flex; align-items: center; gap: 12px;
+    margin: 42px 0 6px; padding-top: 20px; border-top: 2px solid var(--ink);
+  }
+  .part-label .n {
+    font-size: 12px; font-weight: 900; letter-spacing: 0.1em;
+    background: var(--ink); color: var(--paper); padding: 4px 10px; border-radius: 999px;
+  }
+  .part-label h2 { margin: 0; font-size: clamp(20px, 4.5vw, 28px); font-weight: 850; letter-spacing: -0.01em; }
+  .lede { color: var(--ink-soft); margin: 4px 0 22px; font-size: 15px; }
+
+  h3 {
+    font-size: 17px; font-weight: 800; margin: 26px 0 10px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  h3 .dot { width: 11px; height: 11px; border-radius: 3px; }
+
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); font-weight: 600; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 16px;
+  }
+
+  ol.steps, ul.list { margin: 0; padding-left: 0; list-style: none; }
+  ol.steps { counter-reset: s; }
+  ol.steps > li {
+    counter-increment: s; position: relative; padding: 0 0 14px 42px; margin: 0;
+  }
+  ol.steps > li:last-child { padding-bottom: 0; }
+  ol.steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: -2px;
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--accent); color: #fff; font-weight: 800; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+  ul.list > li { position: relative; padding: 0 0 9px 24px; }
+  ul.list > li::before {
+    content: ""; position: absolute; left: 4px; top: 10px;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  }
+
+  .prompt {
+    background: var(--code-bg); color: var(--code-ink);
+    border-radius: 10px; padding: 13px 15px; margin: 8px 0 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13.5px; line-height: 1.55;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+  }
+  .prompt::before {
+    content: "TYPE THIS ▸"; display: block;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 10px; letter-spacing: 0.16em; font-weight: 800;
+    color: var(--hat); margin-bottom: 7px;
+  }
+
+  /* relay sequence */
+  .relay { display: flex; flex-direction: column; gap: 0; }
+  .leg {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--card); padding: 16px 18px; margin-bottom: 12px;
+  }
+  .leg-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 2px; }
+  .leg-num {
+    font-weight: 900; font-size: 13px; color: #fff; background: var(--ink);
+    border-radius: 7px; padding: 3px 9px; font-variant-numeric: tabular-nums;
+  }
+  .leg-title { font-weight: 800; font-size: 16px; }
+  .leg-teaches { color: var(--ink-soft); font-size: 13.5px; margin: 2px 0 0; }
+
+  .tier {
+    display: inline-block; font-size: 10.5px; font-weight: 800;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px; margin-left: auto;
+  }
+  .tier.core { background: color-mix(in srgb, var(--lime) 20%, transparent); color: var(--lime); }
+  .tier.bonus { background: color-mix(in srgb, var(--violet) 22%, transparent); color: var(--violet); }
+
+  .callout {
+    border-left: 4px solid var(--snare); background: color-mix(in srgb, var(--snare) 8%, var(--card));
+    border-radius: 0 10px 10px 0; padding: 13px 16px; margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout strong { color: var(--snare); }
+  .callout.good { border-left-color: var(--lime); background: color-mix(in srgb, var(--lime) 10%, var(--card)); }
+  .callout.good strong { color: var(--lime); }
+
+  table.tiers { width: 100%; border-collapse: collapse; font-size: 14px; margin: 6px 0 4px; }
+  table.tiers th, table.tiers td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.tiers th { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+
+  .foot {
+    margin-top: 40px; padding-top: 18px; border-top: 2px solid var(--ink);
+    font-size: 13px; color: var(--ink-soft); text-align: center;
+  }
+
+  .theme-toggle {
+    position: fixed; top: 12px; right: 12px; z-index: 10;
+    font: inherit; font-size: 13px; font-weight: 700;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 999px; padding: 7px 13px; cursor: pointer;
+  }
+
+  @media print {
+    .theme-toggle { display: none; }
+    #doc { background: #fff; padding: 0; }
+    :root { --paper:#fff; --card:#fff; --ink:#1a1a1a; --ink-soft:#555; --line:#ccc; --code-bg:#f0ece5; --code-ink:#1a1a1a; }
+    .prompt::before { color: #0e9bb0; }
+    .part-label { break-before: page; }
+    .part-label.first { break-before: auto; }
+    .leg, .card { break-inside: avoid; }
+  }
+</style>
+
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle light or dark">◐ Theme</button>
+
+<div id="doc">
+  <div class="sheet">
+
+    <div class="masthead">
+      <div class="bar">
+        <span style="background:var(--kick)"></span>
+        <span style="background:var(--snare)"></span>
+        <span style="background:var(--hat)"></span>
+        <span style="background:var(--lime)"></span>
+        <span style="background:var(--violet)"></span>
+      </div>
+      <div class="inner">
+        <p class="eyebrow">Compton Tech Week · Hands-On Workshop</p>
+        <h1>The Beat Relay</h1>
+        <p>Build a real drum machine together — one person, one feature at a time — just by talking to an AI. No coding experience needed. Then take it home and keep building.</p>
+      </div>
+    </div>
+
+    <!-- PART 1 -->
+    <div class="part-label first">
+      <span class="n">PART 1</span>
+      <h2>Facilitator Guide</h2>
+    </div>
+    <p class="lede">Everything you need to run the session and hand attendees something they keep.</p>
+
+    <h3><span class="dot" style="background:var(--kick)"></span>Before the event (≈15 min, once)</h3>
+    <div class="card">
+      <ol class="steps">
+        <li><strong>Host the master copy so the microphone works.</strong> The Sampler needs the app to run as its own web page (not embedded). Easiest free option — <strong>Netlify Drop</strong>: go to <a href="https://app.netlify.com/drop">app.netlify.com/drop</a>, drag the <code>drum-machine.html</code> file onto the page, and copy the live link it gives you. No account required for a temporary link; sign in only if you want to keep it.</li>
+        <li><strong>Test it on your own phone.</strong> Open the link, play a beat, then open the Sampler and record a sound. Tap “Allow” when the mic prompt appears.</li>
+        <li><strong>Make a QR code</strong> for the link (search “free QR code generator,” paste your link) and put it on a slide so the room can open the app instantly.</li>
+        <li><strong>Have the file ready to give out</strong> — email it, AirDrop it, or share the hosted link. Attendees need the file (or link) to keep building later.</li>
+        <li><strong>Pick relay groups</strong> of 6–8 people and print one copy of Part 2 per person.</li>
+      </ol>
+    </div>
+
+    <h3><span class="dot" style="background:var(--snare)"></span>How the relay works</h3>
+    <p>Each person adds <em>one</em> feature by typing a single prompt, then passes the conversation to the next person. The magic to point out: <strong>the whole app lives in the conversation</strong>, so the next person picks up exactly where the last one left off. Nobody needs to understand the previous code — they just ask for the next thing.</p>
+    <div class="callout good">
+      <strong>Why this works:</strong> when you share the chat, you share the entire project — the AI can read everything built so far. Handing off the conversation <em>is</em> the collaboration.
+    </div>
+
+    <h3><span class="dot" style="background:var(--hat)"></span>The relay sequence — exact prompts</h3>
+    <p class="lede">Green = works anywhere, every time. Purple = bonus; needs the hosted link (mic/sharing).</p>
+
+    <div class="relay">
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">1</span><span class="leg-title">The drum machine</span><span class="tier core">Core</span></div>
+        <p class="leg-teaches">Teaches: the grid, playback, tempo.</p>
+        <div class="prompt">Build me a 16-step drum machine as a single web page with four rows — kick, snare, hi-hat, and clap. Each row is 16 tap buttons. Add a Play button and a tempo slider. Make all the sounds with the Web Audio API — no sound files.</div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">2</span><span class="leg-title">Preset beats</span><span class="tier core">Core</span></div>
+        <p class="leg-teaches">Teaches: patterns, that music is just data.</p>
+        <div class="prompt">Add three preset buttons — Boom Bap, Four on the Floor, and Trap Hats — that fill in the grid with a beat when tapped.</div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">3</span><span class="leg-title">Echo (delay)</span><span class="tier core">Core</span></div>
+        <p class="leg-teaches">Teaches: effects, sends, signal routing.</p>
+        <div class="prompt">Add a delay/echo effect with a settings panel, and a send slider for each drum so I can choose how much of each one goes into the echo.</div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">4</span><span class="leg-title">Sync the echo to tempo</span><span class="tier core">Core</span></div>
+        <p class="leg-teaches">Teaches: rhythm math (beats vs. milliseconds).</p>
+        <div class="prompt">Change the delay time from milliseconds to note values synced to the tempo, like 1/4, 1/8, and 1/16 notes.</div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">5</span><span class="leg-title">Filter you can draw</span><span class="tier core">Core</span></div>
+        <p class="leg-teaches">Teaches: automation — changing a control over time.</p>
+        <div class="prompt">Add a low-pass/high-pass filter on the whole mix, with a lane I can draw on to set how the filter moves across the 16 steps, playing back in time with the beat.</div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">6</span><span class="leg-title">Swing &amp; reverb</span><span class="tier core">Core</span></div>
+        <p class="leg-teaches">Teaches: feel and space.</p>
+        <div class="prompt">Add a Swing slider for a shuffle feel, and a Reverb slider that adds room sound to the whole kit.</div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">7</span><span class="leg-title">More drums</span><span class="tier core">Core</span></div>
+        <p class="leg-teaches">Teaches: extending the instrument.</p>
+        <div class="prompt">Add two more drum sounds as new rows — an open hi-hat and a cowbell.</div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">8</span><span class="leg-title">Surprise Me</span><span class="tier core">Core</span></div>
+        <p class="leg-teaches">Teaches: generative randomness with rules.</p>
+        <div class="prompt">Add a "Surprise Me" button that generates a random but musical beat — kicks on the beat, snares on the backbeat, hats filling in.</div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">9</span><span class="leg-title">Record your own sound</span><span class="tier bonus">Bonus · hosted</span></div>
+        <p class="leg-teaches">Teaches: hardware &amp; permissions — the real "ceiling."</p>
+        <div class="prompt">Add a sampler that records a short sound from the microphone and adds it as a new track I can sequence, with a pitch slider.</div>
+      </div>
+
+      <div class="leg">
+        <div class="leg-head"><span class="leg-num">10</span><span class="leg-title">Share your beat</span><span class="tier bonus">Bonus · hosted</span></div>
+        <p class="leg-teaches">Teaches: saving &amp; sharing state.</p>
+        <div class="prompt">Let me save and share my beat as a link that reopens the exact pattern when someone else clicks it.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Teaching moment for the room:</strong> steps 1–8 work for everyone, instantly. The bonus steps only get hard because they touch a <em>microphone</em> and <em>sharing</em> — that is, real hardware and permissions. The lesson: AI builds the instrument in seconds; <em>where you run it</em> decides what it's allowed to do.
+    </div>
+
+    <!-- PART 2 -->
+    <div class="part-label">
+      <span class="n">PART 2</span>
+      <h2>Take This Home</h2>
+    </div>
+    <p class="lede">You built it — now keep it, and keep going. Everything here is free.</p>
+
+    <h3><span class="dot" style="background:var(--kick)"></span>Play it anytime</h3>
+    <div class="card">
+      <p style="margin:0">Open the workshop link (or the QR code) on any phone or computer:</p>
+      <div class="prompt" style="margin-top:10px">Your link:  ____________________________________</div>
+      <p style="margin:10px 0 0; font-size:13.5px; color:var(--ink-soft)">Running the app is 100% free and uses <strong>no AI credits</strong> — it plays entirely in your browser.</p>
+    </div>
+
+    <h3><span class="dot" style="background:var(--snare)"></span>Keep building it — just by talking (easiest)</h3>
+    <div class="card">
+      <ol class="steps">
+        <li>Go to <a href="https://claude.ai">claude.ai</a> and start a chat (a free account works).</li>
+        <li><strong>Attach the drum-machine file</strong> the facilitator gave you (or paste your link).</li>
+        <li>Type what you want to add — for example:</li>
+      </ol>
+      <div class="prompt" style="margin-top:12px">Here's my drum machine. Add a piano keyboard I can play with the mouse or by tapping.</div>
+      <p style="margin:12px 0 0; font-size:13.5px; color:var(--ink-soft)">The file carries the whole app, so the AI can keep editing it. No coding — just ask.</p>
+    </div>
+
+    <h3><span class="dot" style="background:var(--hat)"></span>Get a free GitHub account (to host &amp; save your own copy)</h3>
+    <div class="card">
+      <ol class="steps">
+        <li>Go to <a href="https://github.com">github.com</a> and click <strong>Sign up</strong>.</li>
+        <li>Enter your email, pick a username and password.</li>
+        <li>Verify your email (check your inbox for a code).</li>
+        <li>Choose the <strong>Free</strong> plan — it's all you need.</li>
+      </ol>
+      <p style="margin:12px 0 0; font-size:13.5px; color:var(--ink-soft)">GitHub is where developers store and share projects. Free accounts can host web pages for free.</p>
+    </div>
+
+    <h3><span class="dot" style="background:var(--lime)"></span>Put your own copy online (free hosting)</h3>
+    <div class="card">
+      <p style="margin:0 0 10px"><strong>Fastest — Netlify Drop (no coding):</strong></p>
+      <ul class="list">
+        <li>Go to <a href="https://app.netlify.com/drop">app.netlify.com/drop</a>.</li>
+        <li>Drag your HTML file onto the page.</li>
+        <li>You instantly get a live link you can share. Sign in (free) to keep it forever.</li>
+      </ul>
+      <p style="margin:16px 0 10px"><strong>With GitHub — GitHub Pages:</strong></p>
+      <ul class="list">
+        <li>Make a new repository → upload your file, renamed <code>index.html</code>.</li>
+        <li>Open the repo's <strong>Settings → Pages</strong>.</li>
+        <li>Under "Build and deployment," pick <strong>Deploy from a branch</strong> → <code>main</code> → <code>/ (root)</code> → Save.</li>
+        <li>Wait about a minute — your site appears at <code>your-username.github.io/your-repo</code>.</li>
+      </ul>
+      <div class="callout" style="margin-top:14px">
+        <strong>Remember:</strong> the microphone Sampler only works on a <em>hosted</em> page (a real link over https), not inside an app preview. Both options above give you that.
+      </div>
+    </div>
+
+    <h3><span class="dot" style="background:var(--violet)"></span>Ideas for what to add next</h3>
+    <div class="card">
+      <ul class="list">
+        <li>A piano or bass keyboard you can play</li>
+        <li>A second pattern (A/B) you can switch between live</li>
+        <li>Save your favorite beats and load them back</li>
+        <li>A screen visualizer that reacts to the music</li>
+        <li>Record the whole loop and download it as an audio file</li>
+        <li>Change the colors and name it your own</li>
+      </ul>
+    </div>
+
+    <div class="foot">
+      Built live at Compton Tech Week · Keep building — the only limit is what you can describe.
+    </div>
+
+  </div>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById("themeToggle");
+    var root = document.documentElement;
+    btn.addEventListener("click", function () {
+      var now = root.getAttribute("data-theme");
+      var isDark = now ? now === "dark"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.setAttribute("data-theme", isDark ? "light" : "dark");
+    });
+  })();
+</script>
