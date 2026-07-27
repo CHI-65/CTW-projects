@@ -413,7 +413,7 @@
   <div class="machine" role="application" aria-label="Drum machine">
     <div class="brand">
       <h1>Tap-a-<span>Beat</span></h1>
-      <div class="tag">Pocket Drum Machine · <span id="buildTag">build 2</span></div>
+      <div class="tag">Pocket Drum Machine · <span id="buildTag">build 3</span></div>
     </div>
 
     <div class="transport">
@@ -625,12 +625,20 @@
 
   // iPhones route Web Audio through the "ambient" audio session, which the physical
   // ring/silent switch mutes — so a phone on silent plays the beat to nobody. Declaring
-  // the session as "playback" opts us out of that. Both steps are no-ops elsewhere.
+  // the session opts us out of that. Both steps are no-ops elsewhere.
+  //
+  // Careful: "playback" declares an OUTPUT-ONLY session. Asking for the mic while it is
+  // set makes getUserMedia fail with InvalidStateError, so the Sampler switches to
+  // "play-and-record" around a recording and hands it back afterwards.
   let silentLoop = null;
-  function unmuteIOS() {
+  function setSession(type) {
     try {
-      if (navigator.audioSession) navigator.audioSession.type = "playback";  // Safari 16.4+
-    } catch (e) { /* not supported — fall through to the older trick below */ }
+      if (navigator.audioSession) navigator.audioSession.type = type;   // Safari 16.4+
+    } catch (e) { /* not supported here — the silent loop below still helps */ }
+  }
+
+  function unmuteIOS() {
+    setSession("playback");
     // Older iOS has no audioSession API. Keeping a silent <audio> element playing is the
     // long-standing way to move the session out of "ambient" there.
     if (silentLoop) return;
@@ -1281,7 +1289,8 @@
       window.self !== window.top ? "IN A FRAME" : "own tab",
       (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? "mic api ok" : "NO mic api",
       typeof MediaRecorder !== "undefined" ? "recorder ok" : "NO recorder",
-      "build 2",
+      navigator.audioSession ? "session=" + navigator.audioSession.type : "no session api",
+      "build 3",
     ].join(" · ");
   }
 
@@ -1291,33 +1300,58 @@
       setStatus("Recording isn't supported in this browser. Try Safari or Chrome.", "err");
       return;
     }
+    ensureAudio();
+    // Hand the audio session back to a capture-capable mode first — see setSession().
+    setSession("play-and-record");
     try {
-      ensureAudio();
-      // Browsers default these ON for voice calls, where they help. Here they hurt:
-      // noise suppression treats a clap or a beatbox hit as noise and ducks it, and
-      // auto gain fights the normalizer below. Ask for the raw mic instead.
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
+      mediaStream = await openMic();
     } catch (e) {
-      const framed = window.self !== window.top;
-      const name = (e && e.name) || "";
-      if (name === "NotAllowedError" || name === "SecurityError" || name === "PermissionDeniedError") {
-        if (framed) {
-          setStatus("Mic is blocked by the embedded viewer. To record, this page must run as its own hosted page (e.g. open the downloaded file in Chrome, or host it on Netlify/GitHub Pages).", "err");
-        } else {
-          setStatus("Mic permission denied. Click the lock / tune icon by the address bar → Microphone → Allow, then reload.", "err");
+      // A session left in an output-only mode rejects capture with InvalidStateError.
+      // Drop the declaration entirely and take one more run at it before giving up.
+      if (e && e.name === "InvalidStateError") {
+        setSession("auto");
+        try {
+          mediaStream = await openMic();
+        } catch (e2) {
+          micFailed(e2);
+          return;
         }
-      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        setStatus("No microphone found on this device.", "err");
-      } else if (framed) {
-        setStatus("Couldn't open the mic in this embedded view. Open the page in its own tab and try again.", "err");
       } else {
-        setStatus("Couldn't open the mic (" + (name || "unknown error") + "). Try again or use a different browser.", "err");
+        micFailed(e);
+        return;
       }
-      return;
     }
     countInThenRecord();
+  }
+
+  // Browsers default these ON for voice calls, where they help. Here they hurt:
+  // noise suppression treats a clap or a beatbox hit as noise and ducks it, and
+  // auto gain fights the normalizer in processRecording. Ask for the raw mic instead.
+  function openMic() {
+    return navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    });
+  }
+
+  function micFailed(e) {
+    setSession("playback");           // nothing is being captured — go back to output-only
+    const framed = window.self !== window.top;
+    const name = (e && e.name) || "";
+    if (name === "NotAllowedError" || name === "SecurityError" || name === "PermissionDeniedError") {
+      if (framed) {
+        setStatus("Mic is blocked by the embedded viewer. To record, this page must run as its own hosted page (e.g. open the downloaded file in Chrome, or host it on Netlify/GitHub Pages).", "err");
+      } else {
+        setStatus("Mic permission denied. Click the lock / tune icon by the address bar → Microphone → Allow, then reload.", "err");
+      }
+    } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+      setStatus("No microphone found on this device.", "err");
+    } else if (framed) {
+      setStatus("Couldn't open the mic in this embedded view. Open the page in its own tab and try again.", "err");
+    } else if (name === "InvalidStateError" || name === "NotSupportedError") {
+      setStatus("This browser won't hand over the mic. If you opened this from inside another app (Messages, Slack, a chat app), tap the compass / “Open in Safari” button and try again there.", "err");
+    } else {
+      setStatus("Couldn't open the mic (" + (name || "unknown error") + "). Try again or use a different browser.", "err");
+    }
   }
 
   // The very first tap opens the permission prompt, and the attendee is still reading it
@@ -1352,6 +1386,7 @@
       mediaStream.getTracks().forEach((t) => t.stop());
       mediaStream = null;
     }
+    setSession("playback");           // done capturing — restore silent-switch immunity
     recBtn.classList.remove("armed");
     recBtn.classList.toggle("recorded", !!sampleBuffer);
     recBtn.innerHTML = '<span class="rdot"></span>' + (sampleBuffer ? "Re-record" : "Record");
@@ -1365,6 +1400,7 @@
     } catch (e) {
       setStatus("Couldn't start the recorder on this device.", "err");
       mediaStream.getTracks().forEach((t) => t.stop());
+      setSession("playback");
       recBtn.classList.remove("armed");
       recBtn.innerHTML = '<span class="rdot"></span>Record';
       return;
@@ -1388,6 +1424,7 @@
 
   async function onRecStop() {
     if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
+    setSession("playback");           // done capturing — restore silent-switch immunity
     setStatus("Processing…", null);
     const blob = new Blob(chunks, { type: (recorder && recorder.mimeType) || "audio/mp4" });
     try {
