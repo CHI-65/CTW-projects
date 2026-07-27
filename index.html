@@ -617,9 +617,49 @@
       audio = new AC();
       setupGraph();
       syncDelayTime();
+      unmuteIOS();
     }
     if (audio.state === "suspended") audio.resume();
     return audio;
+  }
+
+  // iPhones route Web Audio through the "ambient" audio session, which the physical
+  // ring/silent switch mutes — so a phone on silent plays the beat to nobody. Declaring
+  // the session as "playback" opts us out of that. Both steps are no-ops elsewhere.
+  let silentLoop = null;
+  function unmuteIOS() {
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = "playback";  // Safari 16.4+
+    } catch (e) { /* not supported — fall through to the older trick below */ }
+    // Older iOS has no audioSession API. Keeping a silent <audio> element playing is the
+    // long-standing way to move the session out of "ambient" there.
+    if (silentLoop) return;
+    try {
+      silentLoop = new Audio(silentWavUrl(0.3));
+      silentLoop.loop = true;
+      silentLoop.setAttribute("playsinline", "");
+      const p = silentLoop.play();
+      if (p && p.catch) p.catch(() => { /* blocked until a gesture; harmless */ });
+    } catch (e) { silentLoop = null; }
+  }
+
+  // a few hundred ms of 8-bit silence, built here so the page stays dependency-free
+  function silentWavUrl(seconds) {
+    const rate = 8000, n = Math.max(1, Math.floor(rate * seconds));
+    const buf = new ArrayBuffer(44 + n), view = new DataView(buf);
+    const str = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+    str(0, "RIFF");  view.setUint32(4, 36 + n, true);
+    str(8, "WAVE");  str(12, "fmt ");
+    view.setUint32(16, 16, true);       // PCM header size
+    view.setUint16(20, 1, true);        // format: PCM
+    view.setUint16(22, 1, true);        // mono
+    view.setUint32(24, rate, true);     // sample rate
+    view.setUint32(28, rate, true);     // byte rate (8-bit mono = rate)
+    view.setUint16(32, 1, true);        // block align
+    view.setUint16(34, 8, true);        // bits per sample
+    str(36, "data"); view.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) view.setUint8(44 + i, 128);   // 128 = silence, unsigned 8-bit
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
   }
 
   function setupGraph() {
@@ -1212,6 +1252,7 @@
   const pitchNum = document.getElementById("pitchNum");
 
   let mediaStream = null, recorder = null, chunks = [], recording = false, autoStopTimer = null;
+  let countingIn = false, countInTimer = null;
 
   samplerBtn.addEventListener("click", () => {
     ensureAudio();
@@ -1239,7 +1280,12 @@
     }
     try {
       ensureAudio();
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Browsers default these ON for voice calls, where they help. Here they hurt:
+      // noise suppression treats a clap or a beatbox hit as noise and ducks it, and
+      // auto gain fights the normalizer below. Ask for the raw mic instead.
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      });
     } catch (e) {
       const framed = window.self !== window.top;
       const name = (e && e.name) || "";
@@ -1258,20 +1304,62 @@
       }
       return;
     }
+    countInThenRecord();
+  }
+
+  // The very first tap opens the permission prompt, and the attendee is still reading it
+  // when the 2-second window would otherwise be running. Count them in instead, so the
+  // recording starts when they are actually ready to make a sound. Deliberately silent —
+  // a beep here would land in the recording.
+  function countInThenRecord() {
+    countingIn = true;
+    recBtn.classList.remove("recorded");
+    recBtn.classList.add("armed");
+    let n = 3;
+    const tick = () => {
+      if (!countingIn) return;
+      if (n > 0) {
+        recBtn.innerHTML = '<span class="rdot"></span>' + n + "…";
+        setStatus("Get ready — recording in " + n + "… (tap to cancel)", null);
+        n--;
+        countInTimer = setTimeout(tick, 700);
+      } else {
+        countingIn = false;
+        beginCapture();
+      }
+    };
+    tick();
+  }
+
+  function cancelCountIn() {
+    countingIn = false;
+    clearTimeout(countInTimer);
+    countInTimer = null;
+    if (mediaStream) {
+      mediaStream.getTracks().forEach((t) => t.stop());
+      mediaStream = null;
+    }
+    recBtn.classList.remove("armed");
+    recBtn.classList.toggle("recorded", !!sampleBuffer);
+    recBtn.innerHTML = '<span class="rdot"></span>' + (sampleBuffer ? "Re-record" : "Record");
+    setStatus(sampleBuffer ? "Kept your last sound." : "Ready — up to 2 seconds.", null);
+  }
+
+  function beginCapture() {
     chunks = [];
     try {
       recorder = new MediaRecorder(mediaStream);
     } catch (e) {
       setStatus("Couldn't start the recorder on this device.", "err");
       mediaStream.getTracks().forEach((t) => t.stop());
+      recBtn.classList.remove("armed");
+      recBtn.innerHTML = '<span class="rdot"></span>Record';
       return;
     }
     recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
     recorder.onstop = onRecStop;
     recorder.start();
     recording = true;
-    recBtn.classList.remove("recorded");
-    recBtn.classList.add("armed");
     recBtn.innerHTML = '<span class="rdot"></span>Stop';
     setStatus("Recording… make a sound!", null);
     autoStopTimer = setTimeout(() => { if (recording) stopRec(); }, 2000);
@@ -1365,7 +1453,11 @@
     wctx.stroke();
   }
 
-  recBtn.addEventListener("click", () => { recording ? stopRec() : startRec(); });
+  recBtn.addEventListener("click", () => {
+    if (countingIn) cancelCountIn();
+    else if (recording) stopRec();
+    else startRec();
+  });
   previewBtn.addEventListener("click", () => {
     ensureAudio();
     sample(audio.currentTime, trackOut[sampleIdx]);
