@@ -413,7 +413,7 @@
   <div class="machine" role="application" aria-label="Drum machine">
     <div class="brand">
       <h1>Tap-a-<span>Beat</span></h1>
-      <div class="tag">Pocket Drum Machine</div>
+      <div class="tag">Pocket Drum Machine · <span id="buildTag">build 2</span></div>
     </div>
 
     <div class="transport">
@@ -1268,8 +1268,21 @@
   });
 
   function setStatus(msg, cls) {
-    recStatus.textContent = msg;
+    // Errors carry the environment with them — "mic blocked" means something very
+    // different in a frame than it does in a plain tab over https, and on a phone
+    // there is no console to go and check.
+    recStatus.textContent = cls === "err" ? msg + "  [" + micEnv() + "]" : msg;
     recStatus.className = "rec-status" + (cls ? " " + cls : "");
+  }
+
+  function micEnv() {
+    return [
+      window.isSecureContext ? "https ok" : "NOT https",
+      window.self !== window.top ? "IN A FRAME" : "own tab",
+      (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? "mic api ok" : "NO mic api",
+      typeof MediaRecorder !== "undefined" ? "recorder ok" : "NO recorder",
+      "build 2",
+    ].join(" · ");
   }
 
   async function startRec() {
