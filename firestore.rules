@@ -45,5 +45,12 @@ service cloud.firestore {
       allow create:         if signedIn();
       allow read, update, delete: if isModerator();
     }
+
+    // Workshop settings (just the group count). Public read so the sign-in dropdown can
+    // populate before anyone signs in; only the moderator may change it.
+    match /config/{doc} {
+      allow read:  if true;
+      allow write: if isModerator();
+    }
   }
 }

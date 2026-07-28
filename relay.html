@@ -38,7 +38,7 @@
   /* sign-in */
   .field{ margin:0 0 12px; }
   .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--sub); margin-bottom:5px; }
-  .field input{ width:100%; font:inherit; font-size:15px; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:12px 13px; }
+  .field input, .field select{ width:100%; font:inherit; font-size:15px; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:12px 13px; }
   .signin-err{ color:var(--err); font-size:13px; min-height:18px; margin:2px 0 10px; }
   /* current build */
   .cbuild{ border:1.5px solid var(--acc2); border-radius:13px; background:var(--card); padding:13px 15px; margin:0 0 18px; }
@@ -108,7 +108,7 @@
     <div class="card">
       <div class="field"><label>Your name</label><input id="inName" autocomplete="name" placeholder="First name is fine"></div>
       <div class="field"><label>Email</label><input id="inEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
-      <div class="field"><label>Group</label><input id="inGroup" placeholder="e.g. Group 3 (ask your facilitator)"></div>
+      <div class="field"><label>Group</label><select id="inGroup"><option value="" disabled selected>Choose your group…</option></select></div>
       <div class="signin-err" id="signinErr"></div>
       <button class="big" id="joinBtn" style="width:100%" onclick="doSignIn()">Join the relay →</button>
     </div>
@@ -194,7 +194,15 @@ document.getElementById("basePrompt").textContent = TREE[0].branches[0].prompt;
 // prefill sign-in from last time
 document.getElementById("inName").value = localStorage.getItem("ctw_name")||"";
 document.getElementById("inEmail").value = localStorage.getItem("ctw_email")||"";
-document.getElementById("inGroup").value = localStorage.getItem("ctw_group")||"";
+// populate the Group dropdown from the moderator's group count (live, readable before sign-in)
+onSnapshot(doc(db,"config","workshop"), snap=>{
+  const n = (snap.exists() && Number(snap.data().groupCount)>0) ? Number(snap.data().groupCount) : 8;
+  const sel = document.getElementById("inGroup");
+  const prev = localStorage.getItem("ctw_group") || sel.value;
+  sel.innerHTML = '<option value="" disabled selected>Choose your group…</option>' +
+    Array.from({length:n},(_,i)=>`<option value="Group ${i+1}">Group ${i+1}</option>`).join("");
+  if(prev){ const o=[...sel.options].find(x=>x.value===prev); if(o) sel.value=prev; }
+}, ()=>{});
 
 function show(id){
   document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id===id));

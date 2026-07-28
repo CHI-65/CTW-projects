@@ -23,6 +23,9 @@
   .gate h2{ font-size:22px; margin:0 0 8px; }
   .gate p{ color:var(--sub); max-width:40ch; margin:0 auto 22px; }
   .err{ color:var(--err); }
+  .setup{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 18px; font-size:14px; font-weight:700; }
+  .setup input{ width:64px; font:inherit; font-size:14px; font-weight:700; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
+  .setup button{ font:inherit; font-size:13px; font-weight:700; color:#2a1500; background:var(--acc); border:0; border-radius:8px; padding:7px 13px; cursor:pointer; }
   .stats{ display:flex; gap:10px; flex-wrap:wrap; margin:0 0 20px; }
   .stat{ flex:1; min-width:110px; border:1px solid var(--line); border-radius:12px; background:var(--card); padding:12px 14px; }
   .stat .n{ font-size:26px; font-weight:800; color:var(--acc); }
@@ -68,6 +71,12 @@
 
   <!-- DASHBOARD -->
   <section id="dash" style="display:none">
+    <div class="setup">
+      <span>Number of groups:</span>
+      <input type="number" id="grpCount" min="1" max="40" value="6">
+      <button onclick="window.__saveGroupCount()">Set</button>
+      <span class="muted" id="grpCountMsg"></span>
+    </div>
     <div class="stats">
       <div class="stat"><div class="n" id="sGroups">0</div><div class="l">Groups</div></div>
       <div class="stat"><div class="n" id="sPeople">0</div><div class="l">Attendees</div></div>
@@ -110,6 +119,12 @@ window.__signin = async ()=>{
   }
 };
 window.__signout = async ()=>{ unsubs.forEach(u=>u&&u()); unsubs=[]; Object.values(buildUnsubs).forEach(u=>u&&u()); buildUnsubs={}; await signOut(auth); };
+window.__saveGroupCount = async ()=>{
+  const n = Math.max(1, Math.min(40, parseInt(document.getElementById("grpCount").value,10)||6));
+  const msg=document.getElementById("grpCountMsg");
+  try{ await setDoc(doc(db,"config","workshop"), { groupCount:n }, {merge:true}); msg.textContent="saved ✓ — attendees now pick Group 1–"+n; setTimeout(()=>msg.textContent="",2500); }
+  catch(e){ msg.textContent="couldn't save ("+(e.code||"error")+")"; }
+};
 
 const fmt = ts => { try{ return ts&&ts.toDate ? ts.toDate().toLocaleString() : ""; }catch(e){ return ""; } };
 const esc = s => (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -178,6 +193,10 @@ document.getElementById("groups").addEventListener("click", async (e)=>{
 function startDashboard(){
   unsubs.forEach(u=>u&&u()); unsubs=[];
   Object.values(buildUnsubs).forEach(u=>u&&u()); buildUnsubs={}; buildsData={}; groupsData=[];
+  // workshop settings — reflect the saved group count in the control
+  unsubs.push(onSnapshot(doc(db,"config","workshop"), snap=>{
+    if(snap.exists() && snap.data().groupCount){ document.getElementById("grpCount").value = snap.data().groupCount; }
+  }));
   // Groups + per-group versioned build history
   unsubs.push(onSnapshot(collection(db,"groups"), snap=>{
     groupsData=[]; snap.forEach(d=>groupsData.push({id:d.id, ...d.data()}));
