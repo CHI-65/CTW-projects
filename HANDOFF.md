@@ -6,13 +6,21 @@ of those. Written 2026-07-27.
 
 ---
 
-## The one open question
+## The one open question — RESOLVED (2026-07-27)
 
-**Does the Sampler microphone work on an iPhone at `build 3`?**
+**Does the Sampler microphone work on an iPhone at `build 3`? → Yes.**
 
-Everything below is context for answering that. It has never been confirmed on real
-hardware. A previous "verified" claim was wrong — see *The mistake worth not
-repeating*.
+Confirmed on real hardware: the repo owner ran the live site
+(`https://chi-65.github.io/CTW-projects/?v=4`) on an iPhone in Safari and the Sampler
+recorded and played back end-to-end ("It worked"). This is the first real-hardware
+confirmation — every prior "verified" claim was Chromium-only and one was wrong (see
+*The mistake worth not repeating*).
+
+Corroborating (but NOT a substitute for the above): build 3 passes the Safari-shim
+regression test below in Chromium — `getUserMedia` runs under `play-and-record`, the
+session transitions `play-and-record → playback`, and the flow reaches "Got it!".
+
+Everything below is the context that led here; kept for history.
 
 ---
 

@@ -317,10 +317,13 @@
     padding: 11px 15px; cursor: pointer; -webkit-tap-highlight-color: transparent;
   }
   .mini-btn:disabled { opacity: 0.4; cursor: default; }
+  .mini-btn.on { background: var(--sample); color: #24103a; border-color: transparent; }
   #wave {
-    width: 100%; height: 60px; display: block; margin-bottom: 16px;
+    width: 100%; height: 60px; display: block; margin-bottom: 6px;
     border: 1px solid var(--edge); border-radius: 10px; background: #1c150f;
+    touch-action: none; cursor: ew-resize;
   }
+  .wave-hint { font-size: 12px; color: var(--ink-dim); margin: 0 0 14px; }
 
   /* grid */
   .grid { padding: 14px 12px 20px; }
@@ -413,7 +416,7 @@
   <div class="machine" role="application" aria-label="Drum machine">
     <div class="brand">
       <h1>Tap-a-<span>Beat</span></h1>
-      <div class="tag">Pocket Drum Machine · <span id="buildTag">build 3</span></div>
+      <div class="tag">Pocket Drum Machine · <span id="buildTag">build 4</span></div>
     </div>
 
     <div class="transport">
@@ -506,9 +509,11 @@
       <div class="rec-row">
         <button type="button" class="rec-btn" id="recBtn"><span class="rdot"></span>Record</button>
         <button type="button" class="mini-btn" id="previewBtn" disabled>Preview</button>
+        <button type="button" class="mini-btn" id="reverseBtn" disabled aria-pressed="false">Reverse</button>
         <span class="rec-status" id="recStatus">Ready — up to 2 seconds.</span>
       </div>
-      <canvas id="wave" aria-label="Recorded sample waveform"></canvas>
+      <canvas id="wave" aria-label="Recorded sample waveform — drag the ends to trim"></canvas>
+      <p class="wave-hint">Drag the ends of the waveform to trim your sound. Reverse plays it backwards.</p>
       <div class="knobs">
         <div class="ctl">
           <div class="top"><span class="name">Pitch</span><span class="num" id="pitchNum">1.00×</span></div>
@@ -816,12 +821,16 @@
     });
   }
 
-  let sampleBuffer = null;   // the user's recorded sound
+  let sampleBuffer = null;   // the user's recorded sound (raw, full length)
+  let editedBuffer = null;   // sampleBuffer after trim + reverse — this is what actually plays
+  let cropStart = 0, cropEnd = 1;   // trim handles, as fractions 0..1 of the recording
+  let reversed = false;             // play the trimmed sample backwards
   let samplePitch = 1;       // playbackRate
   function sample(t, out) {
-    if (!sampleBuffer) return;
+    const buf = editedBuffer || sampleBuffer;
+    if (!buf) return;
     const src = audio.createBufferSource();
-    src.buffer = sampleBuffer;
+    src.buffer = buf;
     src.playbackRate.value = samplePitch;
     src.connect(out);
     src.start(t);
@@ -1253,6 +1262,7 @@
   const samplerPanel = document.getElementById("samplerPanel");
   const recBtn = document.getElementById("recBtn");
   const previewBtn = document.getElementById("previewBtn");
+  const reverseBtn = document.getElementById("reverseBtn");
   const recStatus = document.getElementById("recStatus");
   const waveC = document.getElementById("wave");
   const wctx = waveC.getContext("2d");
@@ -1290,7 +1300,7 @@
       (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? "mic api ok" : "NO mic api",
       typeof MediaRecorder !== "undefined" ? "recorder ok" : "NO recorder",
       navigator.audioSession ? "session=" + navigator.audioSession.type : "no session api",
-      "build 3",
+      "build 4",
     ].join(" · ");
   }
 
@@ -1431,6 +1441,11 @@
       const arr = await blob.arrayBuffer();
       audio.decodeAudioData(arr.slice(0), (buf) => {
         sampleBuffer = processRecording(buf);
+        cropStart = 0; cropEnd = 1; reversed = false;   // fresh take starts untrimmed, forward
+        reverseBtn.classList.remove("on");
+        reverseBtn.setAttribute("aria-pressed", "false");
+        reverseBtn.disabled = false;
+        rebuildEdited();
         drawWave();
         previewBtn.disabled = false;
         recBtn.classList.add("recorded");
@@ -1474,6 +1489,23 @@
     return out;
   }
 
+  // Rebuild the buffer that actually plays: the trimmed [cropStart..cropEnd] slice of the
+  // recording, reversed if asked. Non-destructive — sampleBuffer keeps the full take, so
+  // the handles can always be dragged back out again.
+  function rebuildEdited() {
+    if (!sampleBuffer) { editedBuffer = null; return; }
+    const srcData = sampleBuffer.getChannelData(0);
+    const N = srcData.length;
+    let a = Math.floor(cropStart * N), b = Math.floor(cropEnd * N);
+    a = Math.max(0, Math.min(N - 1, a));
+    b = Math.max(a + 1, Math.min(N, b));
+    const len = b - a;
+    const out = audio.createBuffer(1, len, sampleBuffer.sampleRate);
+    const od = out.getChannelData(0);
+    for (let i = 0; i < len; i++) od[i] = reversed ? srcData[b - 1 - i] : srcData[a + i];
+    editedBuffer = out;
+  }
+
   function drawWave() {
     const dpr = window.devicePixelRatio || 1;
     const rect = waveC.getBoundingClientRect();
@@ -1501,6 +1533,24 @@
       wctx.lineTo(x, (1 - (min * 0.9 + 1) / 2) * H);
     }
     wctx.stroke();
+
+    // trim overlay: dim what's outside the selection, then draw the two grab handles
+    const xs = cropStart * W, xe = cropEnd * W;
+    wctx.fillStyle = "rgba(12,9,6,0.62)";
+    wctx.fillRect(0, 0, xs, H);
+    wctx.fillRect(xe, 0, W - xe, H);
+    wctx.fillStyle = "#e8c9ff";
+    wctx.fillRect(xs - 1, 0, 2, H);
+    wctx.fillRect(xe - 1, 0, 2, H);
+    wctx.fillStyle = "#c084fc";
+    wctx.fillRect(xs - 3, H / 2 - 9, 6, 18);
+    wctx.fillRect(xe - 3, H / 2 - 9, 6, 18);
+    if (reversed) {
+      wctx.fillStyle = "rgba(192,132,252,0.95)";
+      wctx.font = "700 10px system-ui, -apple-system, sans-serif";
+      wctx.textAlign = "left";
+      wctx.fillText("◀ REVERSED", xs + 7, 14);
+    }
   }
 
   recBtn.addEventListener("click", () => {
@@ -1516,6 +1566,39 @@
     samplePitch = parseInt(pitchInput.value, 10) / 100;
     pitchNum.textContent = samplePitch.toFixed(2) + "×";
   });
+
+  reverseBtn.addEventListener("click", () => {
+    if (!sampleBuffer) return;
+    reversed = !reversed;
+    reverseBtn.classList.toggle("on", reversed);
+    reverseBtn.setAttribute("aria-pressed", reversed ? "true" : "false");
+    rebuildEdited();
+    drawWave();
+  });
+
+  // drag either end of the waveform to trim the sample (non-destructive)
+  let dragHandle = null;   // "start" | "end" — which trim handle is being dragged
+  function waveFrac(e) {
+    const rect = waveC.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  }
+  function moveHandle(f) {
+    const MIN = 0.03;   // keep at least a sliver of the sample selected
+    if (dragHandle === "start") cropStart = Math.max(0, Math.min(f, cropEnd - MIN));
+    else cropEnd = Math.min(1, Math.max(f, cropStart + MIN));
+    rebuildEdited();
+    drawWave();
+  }
+  waveC.addEventListener("pointerdown", (e) => {
+    if (!sampleBuffer) return;
+    const f = waveFrac(e);
+    dragHandle = Math.abs(f - cropStart) <= Math.abs(f - cropEnd) ? "start" : "end";
+    waveC.setPointerCapture(e.pointerId);
+    moveHandle(f);
+  });
+  waveC.addEventListener("pointermove", (e) => { if (dragHandle) moveHandle(waveFrac(e)); });
+  waveC.addEventListener("pointerup", () => { dragHandle = null; });
+  waveC.addEventListener("pointercancel", () => { dragHandle = null; });
   window.addEventListener("resize", () => {
     if (samplerPanel.classList.contains("open")) drawWave();
   });

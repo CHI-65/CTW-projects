@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Beat Relay — How It Works</title>
+<style>
+  :root{ --paper:#17130e; --acc:#ff8a3d; --acc2:#c084fc; --ink:#f4ede2; --sub:#b6a891; --line:#3a2f22; --card:#211a13; --chip:#2a2117; }
+  :root[data-theme="light"]{ --paper:#faf7f2; --acc:#e8590c; --acc2:#7c3aed; --ink:#221c15; --sub:#6b6157; --line:#e7ded1; --card:#ffffff; --chip:#faf7f2; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--paper); color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height:1.45; }
+  .wrap{ max-width:900px; margin:0 auto; padding:26px 18px 70px; }
+  h1{ font-size:25px; font-weight:800; margin:0 0 3px; letter-spacing:-0.01em; }
+  h1 .b{ color:var(--acc); }
+  .lede{ color:var(--sub); font-size:14px; margin:0 0 20px; }
+  .sect{ border:1px solid var(--line); border-radius:14px; background:var(--card); padding:16px 18px; margin:0 0 16px; }
+  .sh{ font-weight:800; font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--acc); margin:0 0 14px; }
+  .sh b{ color:var(--sub); font-weight:600; text-transform:none; letter-spacing:0; font-size:13px; }
+  .flow{ display:flex; align-items:stretch; gap:9px; flex-wrap:wrap; }
+  .node{ flex:1 1 155px; min-width:145px; border:1.5px solid var(--line); border-radius:12px; padding:11px 13px; background:var(--chip); }
+  .node.start{ border-color:var(--acc); }
+  .node.finish{ border-color:var(--acc2); }
+  .nt{ font-weight:800; font-size:14px; }
+  .ns{ color:var(--sub); font-size:12.5px; margin-top:3px; }
+  .arw{ align-self:center; color:var(--acc); font-weight:800; font-size:19px; }
+  .notes{ display:flex; flex-wrap:wrap; gap:7px 18px; margin-top:14px; font-size:12.5px; color:var(--sub); }
+  .trunks{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{ border:1px solid var(--line); border-radius:999px; padding:7px 13px; background:var(--chip); font-weight:700; font-size:13.5px; }
+  .chip small{ color:var(--sub); font-weight:600; }
+  .chip.build{ border-color:var(--acc); }
+  .chain{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; font-size:13.5px; }
+  .stg{ border:1px solid var(--line); border-radius:10px; padding:7px 11px; background:var(--chip); font-weight:700; }
+  .stg.snd{ border-style:dashed; border-color:var(--acc2); }
+  .stg.mst{ border-color:var(--acc); }
+  .go{ color:var(--acc); font-weight:800; }
+  .cap{ font-size:12px; color:var(--sub); margin-top:9px; }
+  .themebtn{ float:right; font:inherit; font-size:13px; font-weight:700; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:10px; padding:7px 11px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <button class="themebtn" onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='light'?'dark':'light')">◑ Theme</button>
+  <h1>The <span class="b">Beat Relay</span> — How It Works</h1>
+  <p class="lede">A snapshot of the whole system as it stands right now.</p>
+
+  <div class="sect">
+    <div class="sh">1 · The Relay</div>
+    <div class="flow">
+      <div class="node start"><div class="nt">Step 1 · Everyone</div><div class="ns">Build the base machine</div></div>
+      <div class="arw">→</div>
+      <div class="node"><div class="nt">Pass the device</div><div class="ns">Each person: 1 prompt = 1 feature</div></div>
+      <div class="arw">→</div>
+      <div class="node"><div class="nt">…repeat 2–4×</div><div class="ns">The machine grows</div></div>
+      <div class="arw">→</div>
+      <div class="node finish"><div class="nt">Share a link</div><div class="ns">Everyone, at the end</div></div>
+    </div>
+    <div class="notes">
+      <span>🧩 One AI chat → one Artifact, edited in place: v1 → v2 → v3…</span>
+      <span>⟲ Breaks? Restore an earlier version</span>
+      <span>🎒 Take-home: branches you didn't reach</span>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="sh">2 · The Feature Tree <b>— pick a few · ~63 options · nobody finishes them all</b></div>
+    <div class="trunks">
+      <span class="chip">🎤 Sampler <small>7</small></span>
+      <span class="chip">🎛️ Signal FX <small>5</small></span>
+      <span class="chip build">🔊 Mastering <small>12</small></span>
+      <span class="chip">🥁 Instruments <small>10</small></span>
+      <span class="chip">🔁 Loops <small>8</small></span>
+      <span class="chip">🎚️ Sequencer <small>5</small></span>
+      <span class="chip">🎹 Melody <small>4</small></span>
+      <span class="chip">🕹️ Performance <small>6</small></span>
+      <span class="chip">💾 Save / Share <small>5</small></span>
+      <span class="chip">📊 Visualizer <small>3</small></span>
+    </div>
+    <div class="cap">Every branch = one tested, copy-paste prompt. Each Copy adds a silent "keep everything working, return the whole file" wrapper.</div>
+  </div>
+
+  <div class="sect">
+    <div class="sh">3 · The Audio Path <b>— sends for ambience, a clean master, polish at the end</b></div>
+    <div class="chain">
+      <span class="stg">🥁 Tracks</span>
+      <span class="go">→</span>
+      <span class="stg snd">🌫️ Reverb send</span>
+      <span class="stg snd">⏱️ Delay send</span>
+      <span class="go">+ dry →</span>
+      <span class="stg">🎚️ Mix bus</span>
+      <span class="go">→</span>
+      <span class="stg mst">🔊 Mastering chain</span>
+      <span class="go">→</span>
+      <span class="stg">🔈 Out</span>
+    </div>
+    <div class="cap">Dashed = parallel send/return (reverb, delay). Solid master = the mastering "glue" (EQ · comp · limiter · punch · lo-fi · width…).</div>
+  </div>
+</div>
+</body>
+</html>
