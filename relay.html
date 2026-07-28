@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Beat Relay</title>
 <style>
-  :root{ --paper:#17130e; --acc:#ff8a3d; --acc2:#c084fc; --ok:#b6e528; --ink:#f4ede2; --sub:#b6a891; --line:#3a2f22; --card:#211a13; --card2:#2a2117; }
-  :root[data-theme="light"]{ --paper:#faf7f2; --acc:#e8590c; --acc2:#7c3aed; --ok:#5f8c00; --ink:#221c15; --sub:#6b6157; --line:#e7ded1; --card:#ffffff; --card2:#f4efe7; }
+  :root{ --paper:#17130e; --acc:#ff8a3d; --acc2:#c084fc; --ok:#b6e528; --ink:#f4ede2; --sub:#b6a891; --line:#3a2f22; --card:#211a13; --card2:#2a2117; --err:#ff7a7a; }
+  :root[data-theme="light"]{ --paper:#faf7f2; --acc:#e8590c; --acc2:#7c3aed; --ok:#5f8c00; --ink:#221c15; --sub:#6b6157; --line:#e7ded1; --card:#ffffff; --card2:#f4efe7; --err:#c0342b; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body{ margin:0; background:var(--paper); color:var(--ink); line-height:1.5;
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -15,6 +15,7 @@
   .bar .logo{ font-weight:800; font-size:15px; }
   .bar .logo b{ color:var(--acc); }
   .bar .sp{ flex:1; }
+  .who{ font-size:12px; color:var(--sub); }
   .tbtn{ font:inherit; font-size:12.5px; font-weight:700; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:9px; padding:7px 10px; cursor:pointer; }
   .screen{ display:none; }
   .screen.on{ display:block; animation:fade .18s ease; }
@@ -23,9 +24,10 @@
   h1 span{ color:var(--acc); }
   h2{ font-size:20px; font-weight:800; margin:0 0 6px; }
   p.lede{ color:var(--sub); font-size:14.5px; margin:0 0 18px; }
-  .hero{ text-align:center; padding:44px 8px 20px; }
+  .hero{ text-align:center; padding:40px 8px 20px; }
   .hero p{ color:var(--sub); font-size:15px; max-width:34ch; margin:0 auto 22px; }
-  .big{ font:inherit; font-size:16px; font-weight:800; color:#241; background:var(--acc); color:#2a1500; border:0; border-radius:12px; padding:14px 26px; cursor:pointer; }
+  .big{ font:inherit; font-size:16px; font-weight:800; background:var(--acc); color:#2a1500; border:0; border-radius:12px; padding:14px 26px; cursor:pointer; }
+  .big:disabled{ opacity:.5; cursor:default; }
   .mini{ color:var(--sub); font-size:12px; margin-top:26px; }
   .card{ border:1px solid var(--line); border-radius:13px; background:var(--card); padding:15px 16px; margin:0 0 14px; }
   .promptbox{ background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:12px 13px; font-size:14.5px; }
@@ -33,16 +35,22 @@
   .copy.done{ background:var(--ok); color:#12240a; }
   .next{ font:inherit; font-size:15px; font-weight:800; color:var(--ink); background:var(--card); border:1.5px solid var(--acc); border-radius:12px; padding:13px 20px; cursor:pointer; width:100%; margin-top:6px; }
   .step-label{ display:inline-block; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--paper); background:var(--acc); border-radius:999px; padding:3px 11px; margin-bottom:10px; }
+  /* sign-in */
+  .field{ margin:0 0 12px; }
+  .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--sub); margin-bottom:5px; }
+  .field input{ width:100%; font:inherit; font-size:15px; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:12px 13px; }
+  .signin-err{ color:var(--err); font-size:13px; min-height:18px; margin:2px 0 10px; }
   /* current build */
   .cbuild{ border:1.5px solid var(--acc2); border-radius:13px; background:var(--card); padding:13px 15px; margin:0 0 18px; }
-  .cb-title{ font-weight:800; font-size:14px; margin-bottom:9px; }
+  .cb-title{ font-weight:800; font-size:14px; margin-bottom:4px; }
+  .cb-sub{ font-size:12px; color:var(--sub); margin-bottom:9px; }
   .cb-row{ display:flex; gap:7px; }
   .cb-row input{ flex:1; min-width:0; font:inherit; font-size:13.5px; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:9px; padding:9px 11px; }
   .cb-row button{ font:inherit; font-size:13px; font-weight:700; border:0; border-radius:9px; padding:9px 13px; cursor:pointer; }
   #saveB{ color:var(--ink); background:var(--card2); border:1px solid var(--line); }
   #openB{ color:#1a0a2e; background:var(--acc2); }
   #openB[disabled]{ opacity:.4; cursor:default; }
-  .cb-note{ font-size:12px; color:var(--sub); margin-top:9px; }
+  .cb-live{ font-size:11.5px; color:var(--ok); margin-top:8px; }
   /* options */
   .prog{ color:var(--sub); font-size:13.5px; margin:0 0 16px; }
   .trunk{ margin:0 0 18px; }
@@ -50,7 +58,6 @@
   .trunk-h .em{ font-size:18px; }
   .trunk-h .nm{ font-weight:800; font-size:15px; }
   .opt{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1px solid var(--line); border-radius:11px; background:var(--card); padding:11px 13px; margin:0 0 7px; cursor:pointer; font:inherit; color:inherit; }
-  .opt:hover{ border-color:var(--acc); }
   .opt.added{ border-color:color-mix(in srgb, var(--ok) 55%, var(--line)); }
   .opt .onm{ font-weight:700; font-size:14px; flex:1; }
   .opt .obd{ font-size:12px; color:var(--sub); white-space:nowrap; }
@@ -69,9 +76,10 @@
 <div class="wrap">
   <div class="bar">
     <span class="logo">The <b>Beat Relay</b></span>
+    <span class="who" id="who"></span>
     <span class="sp"></span>
     <button class="tbtn" onclick="toggleTheme()">◑</button>
-    <button class="tbtn" onclick="show('welcome')">↺ Start over</button>
+    <button class="tbtn" onclick="show('welcome')">↺</button>
   </div>
 
   <!-- WELCOME -->
@@ -79,8 +87,22 @@
     <div class="hero">
       <h1>Let's build something<br><span>magnificent</span></h1>
       <p>Together you'll build a drum machine — one prompt at a time. Pass the phone, add a feature, repeat.</p>
-      <button class="big" onclick="show('step1')">Start →</button>
+      <button class="big" onclick="show('signin')">Start →</button>
       <div class="mini">Compton Tech Week</div>
+    </div>
+  </section>
+
+  <!-- SIGN IN -->
+  <section class="screen" id="signin">
+    <span class="step-label">Sign in</span>
+    <h2>Join your group</h2>
+    <p class="lede">So your group shares one build and we can celebrate who added what.</p>
+    <div class="card">
+      <div class="field"><label>Your name</label><input id="inName" autocomplete="name" placeholder="First name is fine"></div>
+      <div class="field"><label>Email</label><input id="inEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
+      <div class="field"><label>Group</label><input id="inGroup" placeholder="e.g. Group 3 (ask your facilitator)"></div>
+      <div class="signin-err" id="signinErr"></div>
+      <button class="big" id="joinBtn" style="width:100%" onclick="doSignIn()">Join the relay →</button>
     </div>
   </section>
 
@@ -99,13 +121,14 @@
   <!-- OPTIONS -->
   <section class="screen" id="options">
     <div class="cbuild">
-      <div class="cb-title">🎧 Your group's current build</div>
+      <div class="cb-title">🎧 <span id="cbGroup">Your group</span>'s current build</div>
+      <div class="cb-sub">Whoever just built shares their link here — everyone taps Open to jam while the next person adds an upgrade.</div>
       <div class="cb-row">
         <input id="buildLink" placeholder="paste your group's latest link…" inputmode="url">
         <button id="saveB" onclick="saveBuild()">Save</button>
         <button id="openB" onclick="openBuild()" disabled>Open ↗</button>
       </div>
-      <div class="cb-note">While the next person adds an upgrade, everyone opens this to jam on the current build. Update it whenever a new version is shared.</div>
+      <div class="cb-live" id="cbLive"></div>
     </div>
     <h2>Add an upgrade</h2>
     <p class="prog" id="prog"></p>
@@ -130,19 +153,36 @@
 </div>
 
 <script src="tree-data.js"></script>
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
 const FRAME = "Add exactly this one feature to my drum machine and give me back the complete updated file, keeping everything else working exactly as it is:\n\n";
 const TREE = window.RELAY_TREE, FINAL = window.RELAY_FINAL, GOBACK = window.RELAY_GOBACK;
-function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const groupId = g => (g||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "group";
 
 // flat lookup
 const MAP = {};
 TREE.forEach(t => { if(!t.everyone) t.branches.forEach(b => MAP[t.id+"|"+b.id] = {b, t}); });
 
 // state
+let me = { uid:null, name:null, email:null, group:null, gid:null };
 let added = JSON.parse(localStorage.getItem("ctw_added") || "[]");
-function isAdded(key){ return added.includes(key); }
-function saveAdded(){ localStorage.setItem("ctw_added", JSON.stringify(added)); }
+let liveBuild = "";
+let buildUnsub = null;
+
+document.getElementById("basePrompt").textContent = TREE[0].branches[0].prompt;
+// prefill sign-in from last time
+document.getElementById("inName").value = localStorage.getItem("ctw_name")||"";
+document.getElementById("inEmail").value = localStorage.getItem("ctw_email")||"";
+document.getElementById("inGroup").value = localStorage.getItem("ctw_group")||"";
 
 function show(id){
   document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id===id));
@@ -151,10 +191,52 @@ function show(id){
 }
 function toggleTheme(){ const r=document.documentElement; r.setAttribute("data-theme", r.getAttribute("data-theme")==="light"?"dark":"light"); }
 
-// step 1
-document.getElementById("basePrompt").textContent = TREE[0].branches[0].prompt;
+// ---- sign in ----
+async function doSignIn(){
+  const name=document.getElementById("inName").value.trim();
+  const email=document.getElementById("inEmail").value.trim();
+  const group=document.getElementById("inGroup").value.trim();
+  const err=document.getElementById("signinErr");
+  if(!name || !email || !group){ err.textContent="Please fill in all three."; return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent="That email looks off."; return; }
+  const btn=document.getElementById("joinBtn"); btn.disabled=true; err.textContent="";
+  try{
+    const cred = await signInAnonymously(auth);
+    me = { uid:cred.user.uid, name, email, group, gid:groupId(group) };
+    await setDoc(doc(db,"attendees",me.uid), { name, email, group, groupId:me.gid, joinedAt:serverTimestamp() }, {merge:true});
+    localStorage.setItem("ctw_name",name); localStorage.setItem("ctw_email",email); localStorage.setItem("ctw_group",group);
+    document.getElementById("who").textContent = name + " · " + group;
+    document.getElementById("cbGroup").textContent = group;
+    watchBuild();
+    show("step1");
+  }catch(e){
+    err.textContent = "Couldn't sign in — check your connection. ("+(e.code||e.message)+")";
+    btn.disabled=false;
+  }
+}
 
-// copy helpers
+// ---- current build (live via Firestore) ----
+function watchBuild(){
+  if(buildUnsub) buildUnsub();
+  buildUnsub = onSnapshot(doc(db,"groups",me.gid), snap=>{
+    liveBuild = snap.exists() ? (snap.data().buildLink||"") : "";
+    const inp=document.getElementById("buildLink");
+    if(document.activeElement!==inp) inp.value = liveBuild;
+    document.getElementById("openB").disabled = !liveBuild;
+    const live=document.getElementById("cbLive");
+    if(liveBuild){ const by=snap.data().updatedBy; live.textContent = "● live" + (by?(" · last shared by "+by):""); }
+    else live.textContent = "";
+  }, err=>{ document.getElementById("cbLive").textContent = "(offline)"; });
+}
+async function saveBuild(){
+  const link=document.getElementById("buildLink").value.trim();
+  if(!me.gid) return;
+  try{ await setDoc(doc(db,"groups",me.gid), { buildLink:link, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name }, {merge:true}); }
+  catch(e){ document.getElementById("cbLive").textContent = "couldn't save ("+(e.code||"error")+")"; }
+}
+function openBuild(){ if(liveBuild) window.open(liveBuild,"_blank"); }
+
+// ---- copy ----
 function flash(btn){ const t=btn.textContent; btn.textContent="Copied!"; btn.classList.add("done"); setTimeout(()=>{btn.textContent=t; btn.classList.remove("done");},1400); }
 function doCopy(text, btn){
   if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>flash(btn), ()=>fb(text,btn)); } else fb(text,btn);
@@ -162,77 +244,73 @@ function doCopy(text, btn){
 function fb(text, btn){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy"); flash(btn);}catch(e){} document.body.removeChild(ta); }
 function copyEl(sel, btn){ const el=document.querySelector(sel); const raw=btn.hasAttribute("data-raw"); doCopy(raw?el.textContent:FRAME+el.textContent, btn); }
 
-// current build
-function saveBuild(){ const v=document.getElementById("buildLink").value.trim(); localStorage.setItem("ctw_build", v); refreshBuild(); }
-function openBuild(){ const v=localStorage.getItem("ctw_build"); if(v) window.open(v, "_blank"); }
-function refreshBuild(){ const v=localStorage.getItem("ctw_build")||""; document.getElementById("buildLink").value=v; document.getElementById("openB").disabled=!v; }
-
-// options list
+// ---- options ----
+function isAdded(k){ return added.includes(k); }
 function renderOptions(){
-  refreshBuild();
-  document.getElementById("prog").textContent = added.length ? (added.length + " upgrade" + (added.length>1?"s":"") + " added so far — keep going or finish.") : "Pick any upgrade, in any order. Pass the device after each one.";
-  let html = "";
+  document.getElementById("prog").textContent = added.length ? (added.length+" upgrade"+(added.length>1?"s":"")+" added — keep going or finish.") : "Pick any upgrade, in any order. Pass the device after each one.";
+  let html="";
   for(const t of TREE){
     if(t.everyone) continue;
     html += `<div class="trunk"><div class="trunk-h"><span class="em">${t.em}</span><span class="nm">${esc(t.name)}</span></div>`;
     for(const b of t.branches){
       const key=t.id+"|"+b.id;
-      html += `<button class="opt${isAdded(key)?" added":""}" onclick="openDetail('${key}')">
-        <span class="onm">${esc(b.name)}</span><span class="obd">${b.badges}</span><span class="chk">${isAdded(key)?"✓":""}</span></button>`;
+      html += `<button class="opt${isAdded(key)?" added":""}" data-key="${key}"><span class="onm">${esc(b.name)}</span><span class="obd">${b.badges}</span><span class="chk">${isAdded(key)?"✓":""}</span></button>`;
     }
     html += `</div>`;
   }
-  document.getElementById("trunks").innerHTML = html;
+  const box=document.getElementById("trunks");
+  box.innerHTML=html;
+  box.querySelectorAll(".opt").forEach(el=>el.addEventListener("click",()=>openDetail(el.dataset.key)));
 }
 
-// detail
-let curKey = null;
+// ---- detail ----
 function openDetail(key){
-  curKey = key;
-  const mark = document.getElementById("dMark");
+  const mark=document.getElementById("dMark");
   if(key==="FINAL"){
-    document.getElementById("dName").textContent = "🏁 Share your beat";
-    document.getElementById("dBadges").textContent = "Everyone · the finish line";
-    document.getElementById("dDesc").textContent = "The last step for everyone: turn your beat into a link you can share. Paste this in your chat.";
-    document.getElementById("dPrompt").textContent = FINAL.prompt;
-    document.getElementById("dCopy").onclick = function(){ doCopy(FRAME+FINAL.prompt, this); };
-    document.getElementById("dTeach").textContent = "";
+    setDetail("🏁 Share your beat","Everyone · the finish line","The last step for everyone: turn your beat into a link you can share. Paste this in your chat.", FINAL.prompt, FRAME+FINAL.prompt, "");
     mark.style.display="none";
   } else if(key==="GOBACK"){
-    document.getElementById("dName").textContent = "🔙 Go back to the last working version";
-    document.getElementById("dBadges").textContent = "When an upgrade breaks the app";
-    document.getElementById("dDesc").textContent = "Dead ends happen — that's part of it. Paste this right after something breaks. (Or restore an earlier version from the chat's history.)";
-    document.getElementById("dPrompt").textContent = GOBACK;
-    document.getElementById("dCopy").onclick = function(){ doCopy(GOBACK, this); };  // raw, no frame
-    document.getElementById("dTeach").textContent = "";
+    setDetail("🔙 Go back to the last working version","When an upgrade breaks the app","Dead ends happen — part of it. Paste this right after something breaks. (Or restore an earlier version from the chat's history.)", GOBACK, GOBACK, "");
     mark.style.display="none";
   } else {
-    const {b} = MAP[key];
-    document.getElementById("dName").textContent = b.name;
-    document.getElementById("dBadges").textContent = b.badges.replace(/·/g," · ");
-    document.getElementById("dDesc").textContent = "Paste this to add it. Copy includes a safety wrapper so nothing else breaks.";
-    document.getElementById("dPrompt").textContent = b.prompt;
-    document.getElementById("dCopy").onclick = function(){ doCopy(FRAME+b.prompt, this); };
-    document.getElementById("dTeach").textContent = b.teach || "";
+    const {b}=MAP[key];
+    setDetail(b.name, b.badges.replace(/·/g," · "), "Paste this to add it. Copy includes a safety wrapper so nothing else breaks.", b.prompt, FRAME+b.prompt, b.teach||"");
     mark.style.display="block";
     updateMark(key);
-    mark.onclick = function(){ toggleAdded(key); };
+    mark.onclick=()=>toggleAdded(key, b.name);
   }
-  document.getElementById("dCopy").textContent = "Copy the prompt";
-  document.getElementById("dCopy").classList.remove("done");
   show("detail");
 }
+function setDetail(name,badges,desc,promptText,copyText,teach){
+  document.getElementById("dName").textContent=name;
+  document.getElementById("dBadges").textContent=badges;
+  document.getElementById("dDesc").textContent=desc;
+  document.getElementById("dPrompt").textContent=promptText;
+  document.getElementById("dTeach").textContent=teach;
+  const c=document.getElementById("dCopy"); c.textContent="Copy the prompt"; c.classList.remove("done");
+  c.onclick=function(){ doCopy(copyText,this); };
+}
 function updateMark(key){
-  const mark = document.getElementById("dMark");
-  const on = isAdded(key);
-  mark.textContent = on ? "✓ Added — tap to unmark" : "Mark as added";
-  mark.classList.toggle("added", on);
+  const m=document.getElementById("dMark"), on=isAdded(key);
+  m.textContent = on ? "✓ Added — tap to unmark" : "Mark as added";
+  m.classList.toggle("added", on);
 }
-function toggleAdded(key){
-  if(isAdded(key)) added = added.filter(k=>k!==key); else added.push(key);
-  saveAdded(); updateMark(key);
+function toggleAdded(key, label){
+  if(isAdded(key)){ added=added.filter(k=>k!==key); }
+  else{
+    added.push(key);
+    // log who-did-what (fire and forget)
+    if(me.uid){ addDoc(collection(db,"activity"), { group:me.group, groupId:me.gid, name:me.name, uid:me.uid, upgrade:label, ts:serverTimestamp() }).catch(()=>{}); }
+  }
+  localStorage.setItem("ctw_added", JSON.stringify(added));
+  updateMark(key);
 }
-refreshBuild();
+
+// keep sign-in session across reloads
+onAuthStateChanged(auth, u=>{ if(u) me.uid = me.uid || u.uid; });
+
+// expose handlers for inline onclick
+Object.assign(window, { show, toggleTheme, doSignIn, copyEl, saveBuild, openBuild, openDetail });
 </script>
 </body>
 </html>

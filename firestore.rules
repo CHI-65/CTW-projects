@@ -1,0 +1,32 @@
+rules_version = '2';
+// Beat Relay security rules.
+// - groups/{group}: the shared "current build" link + meta. Any signed-in user may
+//   read (so group members see their build) and write (update the link).
+// - attendees/{uid}: name + EMAIL + group. The owner writes only their own record;
+//   ONLY the moderator can read it (protects everyone's email / the roster).
+// - activity/{id}: the who-did-what log. Any signed-in user may add an entry;
+//   ONLY the moderator can read the log.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isModerator() {
+      return signedIn() && request.auth.token.email == "calharrisinc@gmail.com";
+    }
+
+    match /groups/{group} {
+      allow read:  if signedIn();
+      allow write: if signedIn();
+    }
+
+    match /attendees/{uid} {
+      allow create, update: if signedIn() && request.auth.uid == uid;
+      allow read, delete:   if isModerator();
+    }
+
+    match /activity/{id} {
+      allow create:         if signedIn();
+      allow read, update, delete: if isModerator();
+    }
+  }
+}

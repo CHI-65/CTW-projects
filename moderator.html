@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beat Relay — Moderator</title>
+<style>
+  :root{ --paper:#17130e; --acc:#ff8a3d; --acc2:#c084fc; --ok:#b6e528; --ink:#f4ede2; --sub:#b6a891; --line:#3a2f22; --card:#211a13; --card2:#2a2117; --err:#ff7a7a; }
+  :root[data-theme="light"]{ --paper:#faf7f2; --acc:#e8590c; --acc2:#7c3aed; --ok:#5f8c00; --ink:#221c15; --sub:#6b6157; --line:#e7ded1; --card:#ffffff; --card2:#f4efe7; --err:#c0342b; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--paper); color:var(--ink); line-height:1.5;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap{ max-width:960px; margin:0 auto; padding:22px 16px 80px; }
+  .bar{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  h1{ font-size:24px; font-weight:800; margin:0; }
+  h1 b{ color:var(--acc); }
+  .sp{ flex:1; }
+  .sub{ color:var(--sub); font-size:14px; margin:0 0 20px; }
+  button{ font:inherit; cursor:pointer; }
+  .g-btn{ font-size:15px; font-weight:800; color:#2a1500; background:var(--acc); border:0; border-radius:12px; padding:13px 22px; }
+  .tbtn{ font-size:12.5px; font-weight:700; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:9px; padding:7px 11px; }
+  .gate{ text-align:center; padding:60px 12px; }
+  .gate h2{ font-size:22px; margin:0 0 8px; }
+  .gate p{ color:var(--sub); max-width:40ch; margin:0 auto 22px; }
+  .err{ color:var(--err); }
+  .stats{ display:flex; gap:10px; flex-wrap:wrap; margin:0 0 20px; }
+  .stat{ flex:1; min-width:110px; border:1px solid var(--line); border-radius:12px; background:var(--card); padding:12px 14px; }
+  .stat .n{ font-size:26px; font-weight:800; color:var(--acc); }
+  .stat .l{ font-size:12px; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; }
+  h3{ font-size:15px; font-weight:800; margin:24px 0 10px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  .grp{ border:1px solid var(--line); border-radius:12px; background:var(--card); padding:12px 14px; margin:0 0 10px; }
+  .grp .gh{ display:flex; align-items:center; gap:8px; }
+  .grp .gn{ font-weight:800; font-size:15px; }
+  .grp .cnt{ font-size:12px; color:var(--sub); }
+  .grp a{ color:var(--acc2); font-size:13px; word-break:break-all; }
+  .grp .none{ color:var(--sub); font-size:13px; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th{ text-align:left; color:var(--sub); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.04em; padding:6px 8px; border-bottom:1px solid var(--line); }
+  td{ padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .scroll{ overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .muted{ color:var(--sub); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <h1>Beat Relay · <b>Moderator</b></h1>
+    <span class="sp"></span>
+    <button class="tbtn" onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='light'?'dark':'light')">◑</button>
+    <button class="tbtn" id="signout" style="display:none" onclick="window.__signout()">Sign out</button>
+  </div>
+  <p class="sub">Live view of every group — builds, roster, and who added what.</p>
+
+  <!-- GATE -->
+  <section id="gate" class="gate">
+    <h2>Moderator sign-in</h2>
+    <p>Sign in with the moderator Google account to see all groups. Only that account can view the roster and activity.</p>
+    <button class="g-btn" onclick="window.__signin()">Sign in with Google</button>
+    <p class="err" id="gateErr" style="margin-top:16px"></p>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="dash" style="display:none">
+    <div class="stats">
+      <div class="stat"><div class="n" id="sGroups">0</div><div class="l">Groups</div></div>
+      <div class="stat"><div class="n" id="sPeople">0</div><div class="l">Attendees</div></div>
+      <div class="stat"><div class="n" id="sUpg">0</div><div class="l">Upgrades added</div></div>
+    </div>
+
+    <h3>Groups &amp; current builds</h3>
+    <div id="groups"></div>
+
+    <h3>Activity — who did what</h3>
+    <div class="scroll"><table id="activity"><thead><tr><th>When</th><th>Who</th><th>Group</th><th>Upgrade</th></tr></thead><tbody></tbody></table></div>
+
+    <h3>Roster</h3>
+    <div class="scroll"><table id="roster"><thead><tr><th>Name</th><th>Email</th><th>Group</th><th>Joined</th></tr></thead><tbody></tbody></table></div>
+  </section>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { firebaseConfig, MODERATOR_EMAIL } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const gate=document.getElementById("gate"), dash=document.getElementById("dash");
+const gateErr=document.getElementById("gateErr"), signoutBtn=document.getElementById("signout");
+let unsubs=[];
+
+window.__signin = async ()=>{
+  gateErr.textContent="";
+  try{ await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch(e){ gateErr.textContent = "Sign-in failed: "+(e.code||e.message); }
+};
+window.__signout = async ()=>{ unsubs.forEach(u=>u&&u()); unsubs=[]; await signOut(auth); };
+
+const fmt = ts => { try{ return ts&&ts.toDate ? ts.toDate().toLocaleString() : ""; }catch(e){ return ""; } };
+const esc = s => (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+onAuthStateChanged(auth, user=>{
+  if(user && user.email === MODERATOR_EMAIL){
+    gate.style.display="none"; dash.style.display="block"; signoutBtn.style.display="inline-block";
+    startDashboard();
+  } else if(user){
+    // signed in but not the moderator
+    gate.style.display="block"; dash.style.display="none"; signoutBtn.style.display="inline-block";
+    gateErr.textContent = "That account ("+user.email+") isn't the moderator. Sign out and use "+MODERATOR_EMAIL+".";
+  } else {
+    gate.style.display="block"; dash.style.display="none"; signoutBtn.style.display="none";
+  }
+});
+
+function startDashboard(){
+  unsubs.forEach(u=>u&&u()); unsubs=[];
+  // Groups
+  unsubs.push(onSnapshot(collection(db,"groups"), snap=>{
+    const box=document.getElementById("groups"); let html=""; let n=0;
+    const rows=[]; snap.forEach(d=>rows.push({id:d.id, ...d.data()}));
+    rows.sort((a,b)=>(a.group||a.id).localeCompare(b.group||b.id));
+    n=rows.length;
+    if(!rows.length) html='<p class="muted">No groups yet.</p>';
+    for(const g of rows){
+      const link=g.buildLink;
+      html += `<div class="grp"><div class="gh"><span class="gn">${esc(g.group||g.id)}</span></div>`
+        + (link? `<div><a href="${esc(link)}" target="_blank">${esc(link)}</a></div>` : `<div class="none">no build shared yet</div>`)
+        + (g.updatedBy? `<div class="cnt">last shared by ${esc(g.updatedBy)}${g.updatedAt?(" · "+fmt(g.updatedAt)):""}</div>` : "")
+        + `</div>`;
+    }
+    box.innerHTML=html;
+    document.getElementById("sGroups").textContent=n;
+  }));
+  // Roster
+  unsubs.push(onSnapshot(collection(db,"attendees"), snap=>{
+    const rows=[]; snap.forEach(d=>rows.push(d.data()));
+    rows.sort((a,b)=>(a.group||"").localeCompare(b.group||"")||(a.name||"").localeCompare(b.name||""));
+    document.querySelector("#roster tbody").innerHTML = rows.map(r=>
+      `<tr><td>${esc(r.name)}</td><td class="muted">${esc(r.email)}</td><td>${esc(r.group)}</td><td class="muted">${fmt(r.joinedAt)}</td></tr>`
+    ).join("") || `<tr><td colspan="4" class="muted">No sign-ins yet.</td></tr>`;
+    document.getElementById("sPeople").textContent=rows.length;
+  }));
+  // Activity
+  unsubs.push(onSnapshot(query(collection(db,"activity"), orderBy("ts","desc")), snap=>{
+    const rows=[]; snap.forEach(d=>rows.push(d.data()));
+    document.querySelector("#activity tbody").innerHTML = rows.map(r=>
+      `<tr><td class="muted">${fmt(r.ts)}</td><td>${esc(r.name)}</td><td>${esc(r.group)}</td><td>${esc(r.upgrade)}</td></tr>`
+    ).join("") || `<tr><td colspan="4" class="muted">No upgrades logged yet.</td></tr>`;
+    document.getElementById("sUpg").textContent=rows.length;
+  }));
+}
+</script>
+</body>
+</html>
