@@ -80,7 +80,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig, MODERATOR_EMAIL } from "./firebase-config.js";
 
@@ -94,11 +94,14 @@ let unsubs=[];
 
 window.__signin = async ()=>{
   gateErr.textContent="";
-  try{ await signInWithRedirect(auth, new GoogleAuthProvider()); }
-  catch(e){ gateErr.textContent = "Sign-in failed: "+(e.code||e.message); }
+  try{ await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch(e){
+    const c = e.code||"";
+    if(c.includes("popup-blocked")) gateErr.textContent = "Your browser blocked the sign-in popup — allow popups for this site, then tap the button again.";
+    else if(c.includes("popup-closed")) gateErr.textContent = "Sign-in window closed before finishing — tap the button and pick your account.";
+    else gateErr.textContent = "Sign-in failed: "+(c||e.message);
+  }
 };
-// complete a pending redirect sign-in (and surface any error)
-getRedirectResult(auth).catch(e=>{ gateErr.textContent = "Sign-in failed: "+(e.code||e.message); });
 window.__signout = async ()=>{ unsubs.forEach(u=>u&&u()); unsubs=[]; await signOut(auth); };
 
 const fmt = ts => { try{ return ts&&ts.toDate ? ts.toDate().toLocaleString() : ""; }catch(e){ return ""; } };
