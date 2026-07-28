@@ -132,6 +132,7 @@ function startDashboard(){
     for(const g of rows){
       const link=g.buildLink;
       html += `<div class="grp"><div class="gh"><span class="gn">${esc(g.group||g.id)}</span></div>`
+        + `<div class="cnt">🎽 baton: ${g.batonName ? "<b>"+esc(g.batonName)+"</b>" : "(nobody)"}</div>`
         + (link? `<div><a href="${esc(link)}" target="_blank">${esc(link)}</a></div>` : `<div class="none">no build shared yet</div>`)
         + (g.updatedBy? `<div class="cnt">last shared by ${esc(g.updatedBy)}${g.updatedAt?(" · "+fmt(g.updatedAt)):""}</div>` : "")
         + `</div>`;

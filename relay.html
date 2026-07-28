@@ -44,12 +44,18 @@
   .cbuild{ border:1.5px solid var(--acc2); border-radius:13px; background:var(--card); padding:13px 15px; margin:0 0 18px; }
   .cb-title{ font-weight:800; font-size:14px; margin-bottom:4px; }
   .cb-sub{ font-size:12px; color:var(--sub); margin-bottom:9px; }
+  .cb-baton{ font-size:12.5px; color:var(--sub); margin:0 0 9px; }
+  .cb-baton.mine{ color:var(--ok); font-weight:700; }
   .cb-row{ display:flex; gap:7px; }
   .cb-row input{ flex:1; min-width:0; font:inherit; font-size:13.5px; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:9px; padding:9px 11px; }
+  .cb-row input:disabled{ opacity:.5; }
   .cb-row button{ font:inherit; font-size:13px; font-weight:700; border:0; border-radius:9px; padding:9px 13px; cursor:pointer; }
   #saveB{ color:var(--ink); background:var(--card2); border:1px solid var(--line); }
+  #saveB[disabled]{ opacity:.4; cursor:default; }
   #openB{ color:#1a0a2e; background:var(--acc2); }
   #openB[disabled]{ opacity:.4; cursor:default; }
+  .baton-btn{ width:100%; margin-top:9px; font:inherit; font-size:13.5px; font-weight:800; color:#1a0a2e; background:var(--acc2); border:0; border-radius:9px; padding:10px; cursor:pointer; }
+  .baton-btn.pass{ background:var(--card2); color:var(--ink); border:1px solid var(--acc2); }
   .cb-live{ font-size:11.5px; color:var(--ok); margin-top:8px; }
   /* options */
   .prog{ color:var(--sub); font-size:13.5px; margin:0 0 16px; }
@@ -124,12 +130,14 @@
   <section class="screen" id="options">
     <div class="cbuild">
       <div class="cb-title">🎧 <span id="cbGroup">Your group</span>'s current build</div>
-      <div class="cb-sub">Whoever just built shares their link here — everyone taps Open to jam while the next person adds an upgrade.</div>
+      <div class="cb-sub">Only whoever holds the baton can update the build. Everyone can tap Open to jam on the latest.</div>
+      <div class="cb-baton" id="cbBaton">🎽 No one has the baton yet.</div>
       <div class="cb-row">
-        <input id="buildLink" placeholder="paste your group's latest link…" inputmode="url">
-        <button id="saveB" onclick="saveBuild()">Save</button>
+        <input id="buildLink" placeholder="paste the latest link…" inputmode="url" disabled>
+        <button id="saveB" onclick="saveBuild()" disabled>Save</button>
         <button id="openB" onclick="openBuild()" disabled>Open ↗</button>
       </div>
+      <button class="baton-btn" id="batonBtn" onclick="toggleBaton()">🎽 Take the baton to build</button>
       <div class="cb-live" id="cbLive"></div>
     </div>
     <h2>Add an upgrade</h2>
@@ -179,6 +187,7 @@ let me = { uid:null, name:null, email:null, group:null, gid:null };
 let added = JSON.parse(localStorage.getItem("ctw_added") || "[]");
 let liveBuild = "";
 let buildUnsub = null;
+let batonHolderUid = "";
 
 document.getElementById("basePrompt").textContent = TREE[0].branches[0].prompt;
 // prefill sign-in from last time
@@ -224,7 +233,7 @@ async function switchAttendee(){
   try{ if(buildUnsub){ buildUnsub(); buildUnsub=null; } await signOut(auth); }catch(e){}
   me = { uid:null, name:null, email:null, group:null, gid:null };
   added = []; localStorage.removeItem("ctw_added");
-  liveBuild = "";
+  liveBuild = ""; batonHolderUid = "";
   document.getElementById("inName").value = "";
   document.getElementById("inEmail").value = "";
   document.getElementById("who").textContent = "";
@@ -238,19 +247,48 @@ async function switchAttendee(){
 function watchBuild(){
   if(buildUnsub) buildUnsub();
   buildUnsub = onSnapshot(doc(db,"groups",me.gid), snap=>{
-    liveBuild = snap.exists() ? (snap.data().buildLink||"") : "";
+    const d = snap.exists() ? snap.data() : {};
+    liveBuild = d.buildLink || "";
+    batonHolderUid = d.batonUid || "";
+    const holderName = d.batonName || "";
+    const iHave = batonHolderUid && batonHolderUid === me.uid;
+
     const inp=document.getElementById("buildLink");
     if(document.activeElement!==inp) inp.value = liveBuild;
+    inp.disabled = !iHave;
+    document.getElementById("saveB").disabled = !iHave;
     document.getElementById("openB").disabled = !liveBuild;
+
+    const baton=document.getElementById("cbBaton");
+    baton.classList.toggle("mine", !!iHave);
+    if(iHave) baton.textContent = "🎽 You have the baton. Paste your link and tap Save — that shares it and frees the baton for the next person.";
+    else if(holderName) baton.textContent = "🎽 " + holderName + " has the baton (building now).";
+    else baton.textContent = "🎽 No one has the baton. Take it when it's your turn.";
+
+    const btn=document.getElementById("batonBtn");
+    btn.textContent = iHave ? "Pass the baton →" : "🎽 Take the baton to build";
+    btn.classList.toggle("pass", !!iHave);
+
     const live=document.getElementById("cbLive");
-    if(liveBuild){ const by=snap.data().updatedBy; live.textContent = "● live" + (by?(" · last shared by "+by):""); }
+    if(liveBuild){ const by=d.updatedBy; live.textContent = "● live" + (by?(" · last shared by "+by):""); }
     else live.textContent = "";
   }, err=>{ document.getElementById("cbLive").textContent = "(offline)"; });
 }
-async function saveBuild(){
-  const link=document.getElementById("buildLink").value.trim();
+async function toggleBaton(){
   if(!me.gid) return;
-  try{ await setDoc(doc(db,"groups",me.gid), { buildLink:link, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name }, {merge:true}); }
+  try{
+    if(batonHolderUid === me.uid){
+      await setDoc(doc(db,"groups",me.gid), { batonUid:"", batonName:"" }, {merge:true});   // pass
+    } else {
+      await setDoc(doc(db,"groups",me.gid), { batonUid:me.uid, batonName:me.name, batonAt:serverTimestamp(), group:me.group }, {merge:true}); // take
+    }
+  }catch(e){ document.getElementById("cbLive").textContent = "couldn't update baton ("+(e.code||"error")+")"; }
+}
+async function saveBuild(){
+  if(!me.gid || batonHolderUid !== me.uid) return;   // only the baton holder can save
+  const link=document.getElementById("buildLink").value.trim();
+  // Saving the link shares it AND frees the baton for the next person to grab.
+  try{ await setDoc(doc(db,"groups",me.gid), { buildLink:link, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name, batonUid:"", batonName:"" }, {merge:true}); }
   catch(e){ document.getElementById("cbLive").textContent = "couldn't save ("+(e.code||"error")+")"; }
 }
 function openBuild(){ if(liveBuild) window.open(liveBuild,"_blank"); }
@@ -329,7 +367,7 @@ function toggleAdded(key, label){
 onAuthStateChanged(auth, u=>{ if(u) me.uid = me.uid || u.uid; });
 
 // expose handlers for inline onclick
-Object.assign(window, { show, toggleTheme, doSignIn, switchAttendee, copyEl, saveBuild, openBuild, openDetail });
+Object.assign(window, { show, toggleTheme, doSignIn, switchAttendee, toggleBaton, copyEl, saveBuild, openBuild, openDetail });
 </script>
 </body>
 </html>

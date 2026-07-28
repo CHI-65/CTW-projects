@@ -15,8 +15,15 @@ service cloud.firestore {
     }
 
     match /groups/{group} {
-      allow read:  if signedIn();
-      allow write: if signedIn();
+      allow read:   if signedIn();
+      allow create: if signedIn();
+      // Baton safeguard: anyone in the group may take/pass the baton (writes that do NOT
+      // change buildLink), but changing the build link requires currently HOLDING the baton.
+      allow update: if signedIn() && (
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['buildLink'])
+        || request.auth.uid == resource.data.batonUid
+      );
+      allow delete: if isModerator();
     }
 
     match /attendees/{uid} {
