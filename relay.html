@@ -41,11 +41,9 @@
   .field input, .field select{ width:100%; font:inherit; font-size:15px; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:12px 13px; }
   .signin-err{ color:var(--err); font-size:13px; min-height:18px; margin:2px 0 10px; }
   /* current build */
-  .cbuild{ border:1.5px solid var(--acc2); border-radius:13px; background:var(--card); padding:13px 15px; margin:0 0 18px; }
+  .cbuild{ border:1.5px solid var(--acc2); border-radius:13px; background:var(--card); padding:13px 15px; margin:0 0 16px; }
   .cb-title{ font-weight:800; font-size:14px; margin-bottom:4px; }
   .cb-sub{ font-size:12px; color:var(--sub); margin-bottom:9px; }
-  .cb-baton{ font-size:12.5px; color:var(--sub); margin:0 0 9px; }
-  .cb-baton.mine{ color:var(--ok); font-weight:700; }
   .cb-row{ display:flex; gap:7px; }
   .cb-row input{ flex:1; min-width:0; font:inherit; font-size:13.5px; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:9px; padding:9px 11px; }
   .cb-row input:disabled{ opacity:.5; }
@@ -54,9 +52,20 @@
   #saveB[disabled]{ opacity:.4; cursor:default; }
   #openB{ color:#1a0a2e; background:var(--acc2); }
   #openB[disabled]{ opacity:.4; cursor:default; }
-  .baton-btn{ width:100%; margin-top:9px; font:inherit; font-size:13.5px; font-weight:800; color:#1a0a2e; background:var(--acc2); border:0; border-radius:9px; padding:10px; cursor:pointer; }
-  .baton-btn.pass{ background:var(--card2); color:var(--ink); border:1px solid var(--acc2); }
-  .cb-live{ font-size:11.5px; color:var(--ok); margin-top:8px; }
+  .cb-live{ font-size:11.5px; color:var(--ok); margin-top:8px; min-height:15px; }
+  /* baton / waiting-room buzzer */
+  .batonzone{ text-align:center; border:1.5px solid var(--line); border-radius:14px; background:var(--card); padding:16px 15px; margin:0 0 18px; }
+  .bz-status{ font-size:14px; font-weight:700; margin:0 0 12px; }
+  .bz-status.mine{ color:var(--ok); }
+  .bz-status.free{ color:var(--acc); }
+  .buzzer{ font:inherit; font-size:19px; font-weight:900; letter-spacing:-0.01em; color:#2a1500; background:var(--acc); border:0; border-radius:14px; padding:20px 18px; cursor:pointer; width:100%; box-shadow:0 6px 0 color-mix(in srgb, var(--acc) 55%, #000); transition:transform .05s ease; }
+  .buzzer:active{ transform:translateY(4px); box-shadow:0 2px 0 color-mix(in srgb, var(--acc) 55%, #000); }
+  .buzzer.live{ animation:buzz 1s ease-in-out infinite; }
+  @keyframes buzz{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.035); } }
+  .buzzer.locked{ background:var(--card2); color:var(--sub); box-shadow:none; cursor:default; border:1px solid var(--line); font-size:15px; font-weight:800; padding:16px; }
+  .buzzer.locked:active{ transform:none; }
+  .passbtn{ font:inherit; font-size:13.5px; font-weight:700; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:11px; cursor:pointer; width:100%; margin-top:10px; }
+  .waitnote{ font-size:13px; color:var(--sub); margin-top:11px; }
   /* options */
   .prog{ color:var(--sub); font-size:13.5px; margin:0 0 16px; }
   .trunk{ margin:0 0 18px; }
@@ -94,7 +103,7 @@
   <section class="screen on" id="welcome">
     <div class="hero">
       <h1>Let's build something<br><span>magnificent</span></h1>
-      <p>Together you'll build a drum machine — one prompt at a time. Pass the phone, add a feature, repeat.</p>
+      <p>Together you'll build a drum machine — one prompt at a time. Grab the baton, add a feature, pass it on.</p>
       <button class="big" onclick="show('signin')">Start →</button>
       <div class="mini">Compton Tech Week</div>
     </div>
@@ -114,37 +123,47 @@
     </div>
   </section>
 
-  <!-- STEP 1 -->
-  <section class="screen" id="step1">
-    <span class="step-label">Step 1 · Everyone</span>
-    <h2>Build the base machine</h2>
-    <p class="lede">Open a new Claude chat and paste this to create your drum machine. That reply becomes your group's <b>Artifact</b> — the thing you'll keep upgrading.</p>
-    <div class="card">
-      <div class="promptbox" id="basePrompt"></div>
-      <button class="copy" data-raw onclick="copyEl('#basePrompt', this)">Copy the prompt</button>
-    </div>
-    <button class="next" onclick="show('options')">Next: choose your upgrades →</button>
-  </section>
-
-  <!-- OPTIONS -->
+  <!-- RELAY ROOM (waiting room + baton buzzer + build) -->
   <section class="screen" id="options">
+    <!-- current build — everyone can Open; only the baton-holder can upload -->
     <div class="cbuild">
       <div class="cb-title">🎧 <span id="cbGroup">Your group</span>'s current build</div>
-      <div class="cb-sub">Only whoever holds the baton can update the build. Everyone can tap Open to jam on the latest.</div>
-      <div class="cb-baton" id="cbBaton">🎽 No one has the baton yet.</div>
+      <div class="cb-sub" id="cbSub">Everyone can tap Open to jam on the latest. Only whoever holds the baton can upload a new version.</div>
       <div class="cb-row">
-        <input id="buildLink" placeholder="paste the latest link…" inputmode="url" disabled>
+        <input id="buildLink" placeholder="the builder pastes the new link here…" inputmode="url" disabled>
         <button id="saveB" onclick="saveBuild()" disabled>Save</button>
         <button id="openB" onclick="openBuild()" disabled>Open ↗</button>
       </div>
-      <button class="baton-btn" id="batonBtn" onclick="toggleBaton()">🎽 Take the baton to build</button>
       <div class="cb-live" id="cbLive"></div>
     </div>
-    <h2>Add an upgrade</h2>
-    <p class="prog" id="prog"></p>
-    <div id="trunks"></div>
-    <button class="finishbtn" onclick="openDetail('FINAL')">🏁 Finish: share your beat</button>
-    <button class="broke" onclick="openDetail('GOBACK')">Something broke? Go back →</button>
+
+    <!-- baton buzzer / waiting room -->
+    <div class="batonzone">
+      <div class="bz-status" id="bzStatus">🎽 Checking the baton…</div>
+      <button class="buzzer" id="buzzer" onclick="grabBaton()">🔔 Grab the baton!</button>
+      <button class="passbtn" id="passBtn" style="display:none" onclick="passBaton()">Pass the baton →</button>
+      <div class="waitnote" id="waitNote"></div>
+    </div>
+
+    <!-- FIRST BUILDER: base machine (shown only to the holder when no build exists yet) -->
+    <div id="firstBuild" style="display:none">
+      <span class="step-label">Step 1 · You're the first builder</span>
+      <h2>Build the base machine</h2>
+      <p class="lede">You grabbed the baton first, so you create the drum machine everyone else will upgrade. Open a new Claude chat, paste this, then bring the link back here and tap <b>Save</b>.</p>
+      <div class="card">
+        <div class="promptbox" id="basePrompt"></div>
+        <button class="copy" data-raw onclick="copyEl('#basePrompt', this)">Copy the prompt</button>
+      </div>
+    </div>
+
+    <!-- UPGRADE MENU: shown only to the holder once a build exists -->
+    <div id="upgradeZone" style="display:none">
+      <h2>Add an upgrade</h2>
+      <p class="prog" id="prog"></p>
+      <div id="trunks"></div>
+      <button class="finishbtn" onclick="openDetail('FINAL')">🏁 Finish: share your beat</button>
+      <button class="broke" onclick="openDetail('GOBACK')">Something broke? Go back →</button>
+    </div>
   </section>
 
   <!-- DETAIL -->
@@ -166,7 +185,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -188,6 +207,7 @@ let added = JSON.parse(localStorage.getItem("ctw_added") || "[]");
 let liveBuild = "";
 let buildUnsub = null;
 let batonHolderUid = "";
+let batonHolderName = "";
 let liveBuildCount = 0;
 
 document.getElementById("basePrompt").textContent = TREE[0].branches[0].prompt;
@@ -206,7 +226,7 @@ onSnapshot(doc(db,"config","workshop"), snap=>{
 
 function show(id){
   document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id===id));
-  if(id==="options") renderOptions();
+  if(id==="options") renderHub();
   window.scrollTo(0,0);
 }
 function toggleTheme(){ const r=document.documentElement; r.setAttribute("data-theme", r.getAttribute("data-theme")==="light"?"dark":"light"); }
@@ -229,7 +249,7 @@ async function doSignIn(){
     document.getElementById("cbGroup").textContent = group;
     document.getElementById("switchBtn").style.display = "inline-block";   // TEMP · test-only
     watchBuild();
-    show("step1");
+    show("options");
   }catch(e){
     err.textContent = "Couldn't sign in — check your connection. ("+(e.code||e.message)+")";
     btn.disabled=false;
@@ -242,7 +262,7 @@ async function switchAttendee(){
   try{ if(buildUnsub){ buildUnsub(); buildUnsub=null; } await signOut(auth); }catch(e){}
   me = { uid:null, name:null, email:null, group:null, gid:null };
   added = []; localStorage.removeItem("ctw_added");
-  liveBuild = ""; batonHolderUid = "";
+  liveBuild = ""; batonHolderUid = ""; batonHolderName = ""; liveBuildCount = 0;
   document.getElementById("inName").value = "";
   document.getElementById("inEmail").value = "";
   document.getElementById("who").textContent = "";
@@ -252,7 +272,7 @@ async function switchAttendee(){
   show("signin");
 }
 
-// ---- current build (live via Firestore) ----
+// ---- live group build + baton (Firestore) ----
 function watchBuild(){
   if(buildUnsub) buildUnsub();
   buildUnsub = onSnapshot(doc(db,"groups",me.gid), snap=>{
@@ -260,42 +280,103 @@ function watchBuild(){
     liveBuild = d.buildLink || "";
     liveBuildCount = d.buildCount || 0;
     batonHolderUid = d.batonUid || "";
-    const holderName = d.batonName || "";
-    const iHave = batonHolderUid && batonHolderUid === me.uid;
-
+    batonHolderName = d.batonName || "";
+    // keep the current-build row + version line fresh
     const inp=document.getElementById("buildLink");
+    const iHave = batonHolderUid && batonHolderUid === me.uid;
     if(document.activeElement!==inp) inp.value = liveBuild;
     inp.disabled = !iHave;
     document.getElementById("saveB").disabled = !iHave;
     document.getElementById("openB").disabled = !liveBuild;
-
-    const baton=document.getElementById("cbBaton");
-    baton.classList.toggle("mine", !!iHave);
-    if(iHave) baton.textContent = "🎽 You have the baton. Paste your link and tap Save — that shares it and frees the baton for the next person.";
-    else if(holderName) baton.textContent = "🎽 " + holderName + " has the baton (building now).";
-    else baton.textContent = "🎽 No one has the baton. Take it when it's your turn.";
-
-    const btn=document.getElementById("batonBtn");
-    btn.textContent = iHave ? "Pass the baton →" : "🎽 Take the baton to build";
-    btn.classList.toggle("pass", !!iHave);
-
     const live=document.getElementById("cbLive");
     if(liveBuild){ const by=d.updatedBy; const v=d.currentVersion; live.textContent = "● live" + (v?(" · v"+v):"") + (by?(" · "+by):""); }
     else live.textContent = "";
+    renderHub();
   }, err=>{ document.getElementById("cbLive").textContent = "(offline)"; });
 }
-async function toggleBaton(){
-  if(!me.gid) return;
-  try{
-    if(batonHolderUid === me.uid){
-      await setDoc(doc(db,"groups",me.gid), { batonUid:"", batonName:"" }, {merge:true});   // pass
+
+// Decide what the relay room shows: buzzer (free), waiting room (someone else building),
+// first-builder base prompt, or the upgrade menu — based on who holds the baton + build state.
+function renderHub(){
+  if(document.getElementById("options") && !document.getElementById("options").classList.contains("on")) return;
+  const iHave  = batonHolderUid && batonHolderUid === me.uid;
+  const held   = !!batonHolderUid;
+  const hasBuild = liveBuildCount > 0;
+  const status = document.getElementById("bzStatus");
+  const buzzer = document.getElementById("buzzer");
+  const passBtn= document.getElementById("passBtn");
+  const note   = document.getElementById("waitNote");
+  const first  = document.getElementById("firstBuild");
+  const upgrade= document.getElementById("upgradeZone");
+
+  status.className = "bz-status";
+  buzzer.className = "buzzer";
+
+  if(iHave){
+    // I'm the builder
+    passBtn.style.display = "block";
+    buzzer.style.display = "none";
+    status.classList.add("mine");
+    if(hasBuild){
+      status.textContent = "🎽 You've got the baton — you're up!";
+      note.textContent = "Add one upgrade below, paste the new link up top, and tap Save. That shares it and frees the baton for the next person.";
+      first.style.display = "none";
+      upgrade.style.display = "block";
+      renderOptions();
     } else {
-      await setDoc(doc(db,"groups",me.gid), { batonUid:me.uid, batonName:me.name, batonAt:serverTimestamp(), group:me.group }, {merge:true}); // take
+      status.textContent = "🎽 You've got the baton — you're the first builder!";
+      note.textContent = "Build the base machine below, then paste its link up top and tap Save.";
+      first.style.display = "block";
+      upgrade.style.display = "none";
     }
-  }catch(e){ document.getElementById("cbLive").textContent = "couldn't update baton ("+(e.code||"error")+")"; }
+  } else {
+    // I'm waiting
+    passBtn.style.display = "none";
+    buzzer.style.display = "block";
+    first.style.display = "none";
+    upgrade.style.display = "none";
+    if(held){
+      // someone else is building — the waiting room
+      status.textContent = "🎽 " + (batonHolderName||"Someone") + " is building right now.";
+      buzzer.classList.add("locked");
+      buzzer.textContent = "🔒 Baton in use — get ready…";
+      note.textContent = "You're in the waiting room. Tap Open above to jam on the current build. The moment they upload, the baton is up for grabs — be the first to tap!";
+    } else {
+      // baton is free — Family Feud moment
+      status.classList.add("free");
+      status.textContent = "🎽 The baton is UP FOR GRABS!";
+      buzzer.classList.add("live");
+      buzzer.textContent = hasBuild ? "🔔 Grab it — add the next upgrade!" : "🔔 Grab it — be the first to build!";
+      note.textContent = "First to tap wins the baton and builds next.";
+    }
+  }
+}
+
+// Family Feud grab: atomic — only the first tap wins, everyone else is told they missed it.
+async function grabBaton(){
+  if(!me.gid || (batonHolderUid && batonHolderUid===me.uid)) return;
+  const ref=doc(db,"groups",me.gid);
+  const live=document.getElementById("cbLive");
+  try{
+    await runTransaction(db, async tx=>{
+      const s = await tx.get(ref);
+      const cur = s.exists() ? s.data() : {};
+      if(cur.batonUid){ const e=new Error("taken"); e.taken=true; throw e; }   // someone holds it already
+      tx.set(ref, { batonUid:me.uid, batonName:me.name, batonAt:serverTimestamp(), group:me.group }, {merge:true});
+    });
+    live.textContent = "🎉 You got the baton!";
+  }catch(e){
+    if(e && e.taken){ live.textContent = "So close — someone grabbed it first. Wait for the next turn!"; }
+    else{ live.textContent = "couldn't grab the baton ("+(e.code||"error")+")"; }
+  }
+}
+async function passBaton(){
+  if(!me.gid || batonHolderUid !== me.uid) return;
+  try{ await setDoc(doc(db,"groups",me.gid), { batonUid:"", batonName:"" }, {merge:true}); }
+  catch(e){ document.getElementById("cbLive").textContent = "couldn't pass the baton ("+(e.code||"error")+")"; }
 }
 async function saveBuild(){
-  if(!me.gid || batonHolderUid !== me.uid) return;   // only the baton holder can save
+  if(!me.gid || batonHolderUid !== me.uid) return;   // only the baton holder can upload
   const link=document.getElementById("buildLink").value.trim();
   if(!link) return;
   const newVer = (liveBuildCount || 0) + 1;
@@ -304,6 +385,7 @@ async function saveBuild(){
     await addDoc(collection(db,"groups",me.gid,"builds"), { version:newVer, link, by:me.name, uid:me.uid, at:serverTimestamp() });
     // 2) point the group at the new version AND free the baton for the next person
     await setDoc(doc(db,"groups",me.gid), { buildLink:link, buildCount:newVer, currentVersion:newVer, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name, batonUid:"", batonName:"" }, {merge:true});
+    document.getElementById("cbLive").textContent = "✅ Uploaded v"+newVer+" — baton freed for the next builder!";
   }catch(e){ document.getElementById("cbLive").textContent = "couldn't save ("+(e.code||"error")+")"; }
 }
 function openBuild(){ if(liveBuild) window.open(liveBuild,"_blank"); }
@@ -319,7 +401,7 @@ function copyEl(sel, btn){ const el=document.querySelector(sel); const raw=btn.h
 // ---- options ----
 function isAdded(k){ return added.includes(k); }
 function renderOptions(){
-  document.getElementById("prog").textContent = added.length ? (added.length+" upgrade"+(added.length>1?"s":"")+" added — keep going or finish.") : "Pick any upgrade, in any order. Pass the device after each one.";
+  document.getElementById("prog").textContent = added.length ? (added.length+" upgrade"+(added.length>1?"s":"")+" added — keep going or finish.") : "Pick any upgrade, in any order. Upload it, then pass the baton.";
   let html="";
   for(const t of TREE){
     if(t.everyone) continue;
@@ -382,7 +464,7 @@ function toggleAdded(key, label){
 onAuthStateChanged(auth, u=>{ if(u) me.uid = me.uid || u.uid; });
 
 // expose handlers for inline onclick
-Object.assign(window, { show, toggleTheme, doSignIn, switchAttendee, toggleBaton, copyEl, saveBuild, openBuild, openDetail });
+Object.assign(window, { show, toggleTheme, doSignIn, switchAttendee, grabBaton, passBaton, copyEl, saveBuild, openBuild, openDetail });
 </script>
 </body>
 </html>
