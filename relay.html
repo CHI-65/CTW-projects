@@ -78,6 +78,8 @@
     <span class="logo">The <b>Beat Relay</b></span>
     <span class="who" id="who"></span>
     <span class="sp"></span>
+    <!-- TEMP · test-only (remove for the real workshop): simulate multiple attendees from one phone -->
+    <button class="tbtn" id="switchBtn" style="display:none" onclick="switchAttendee()">⇄ Switch attendee</button>
     <button class="tbtn" onclick="toggleTheme()">◑</button>
     <button class="tbtn" onclick="show('welcome')">↺</button>
   </div>
@@ -155,7 +157,7 @@
 <script src="tree-data.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -207,12 +209,29 @@ async function doSignIn(){
     localStorage.setItem("ctw_name",name); localStorage.setItem("ctw_email",email); localStorage.setItem("ctw_group",group);
     document.getElementById("who").textContent = name + " · " + group;
     document.getElementById("cbGroup").textContent = group;
+    document.getElementById("switchBtn").style.display = "inline-block";   // TEMP · test-only
     watchBuild();
     show("step1");
   }catch(e){
     err.textContent = "Couldn't sign in — check your connection. ("+(e.code||e.message)+")";
     btn.disabled=false;
   }
+}
+
+// ---- TEMP · test-only: switch attendee (remove for the real workshop) ----
+// Signs out the anonymous user so the next Join becomes a fresh, distinct attendee.
+async function switchAttendee(){
+  try{ if(buildUnsub){ buildUnsub(); buildUnsub=null; } await signOut(auth); }catch(e){}
+  me = { uid:null, name:null, email:null, group:null, gid:null };
+  added = []; localStorage.removeItem("ctw_added");
+  liveBuild = "";
+  document.getElementById("inName").value = "";
+  document.getElementById("inEmail").value = "";
+  document.getElementById("who").textContent = "";
+  document.getElementById("signinErr").textContent = "";
+  document.getElementById("joinBtn").disabled = false;
+  document.getElementById("switchBtn").style.display = "none";
+  show("signin");
 }
 
 // ---- current build (live via Firestore) ----
@@ -310,7 +329,7 @@ function toggleAdded(key, label){
 onAuthStateChanged(auth, u=>{ if(u) me.uid = me.uid || u.uid; });
 
 // expose handlers for inline onclick
-Object.assign(window, { show, toggleTheme, doSignIn, copyEl, saveBuild, openBuild, openDetail });
+Object.assign(window, { show, toggleTheme, doSignIn, switchAttendee, copyEl, saveBuild, openBuild, openDetail });
 </script>
 </body>
 </html>
