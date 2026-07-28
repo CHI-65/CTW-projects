@@ -17,13 +17,23 @@ service cloud.firestore {
     match /groups/{group} {
       allow read:   if signedIn();
       allow create: if signedIn();
-      // Baton safeguard: anyone in the group may take/pass the baton (writes that do NOT
-      // change buildLink), but changing the build link requires currently HOLDING the baton.
+      // Baton safeguard: anyone may take/pass the baton (writes not changing buildLink),
+      // but changing the build link requires HOLDING the baton — or being the moderator
+      // (restore-to-a-version / free-the-baton).
       allow update: if signedIn() && (
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['buildLink'])
+        isModerator()
+        || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['buildLink'])
         || request.auth.uid == resource.data.batonUid
       );
       allow delete: if isModerator();
+
+      // Immutable, append-only build history — no version is ever overwritten.
+      match /builds/{buildId} {
+        allow read:   if signedIn();
+        allow create: if signedIn();
+        allow update: if false;
+        allow delete: if isModerator();
+      }
     }
 
     match /attendees/{uid} {

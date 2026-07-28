@@ -39,6 +39,13 @@
   td{ padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
   .scroll{ overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--card); }
   .muted{ color:var(--sub); }
+  .mini-act{ font:inherit; font-size:11px; font-weight:700; color:var(--acc); background:transparent; border:1px solid var(--line); border-radius:6px; padding:2px 8px; cursor:pointer; margin-left:6px; }
+  .mini-act:hover{ border-color:var(--acc); }
+  .builds{ margin-top:7px; border-top:1px solid var(--line); padding-top:6px; }
+  .bd{ font-size:12.5px; padding:3px 0; color:var(--sub); display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .bd.cur{ color:var(--ink); }
+  .bv{ font-weight:800; }
+  .bd a{ color:var(--acc2); }
 </style>
 </head>
 <body>
@@ -81,7 +88,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig, MODERATOR_EMAIL } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -102,7 +109,7 @@ window.__signin = async ()=>{
     else gateErr.textContent = "Sign-in failed: "+(c||e.message);
   }
 };
-window.__signout = async ()=>{ unsubs.forEach(u=>u&&u()); unsubs=[]; await signOut(auth); };
+window.__signout = async ()=>{ unsubs.forEach(u=>u&&u()); unsubs=[]; Object.values(buildUnsubs).forEach(u=>u&&u()); buildUnsubs={}; await signOut(auth); };
 
 const fmt = ts => { try{ return ts&&ts.toDate ? ts.toDate().toLocaleString() : ""; }catch(e){ return ""; } };
 const esc = s => (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -120,25 +127,69 @@ onAuthStateChanged(auth, user=>{
   }
 });
 
+// ---- Groups + versioned build history ----
+let groupsData = [], buildsData = {}, buildUnsubs = {};
+
+function renderGroups(){
+  const box=document.getElementById("groups");
+  const rows=[...groupsData].sort((a,b)=>(a.group||a.id).localeCompare(b.group||b.id));
+  if(!rows.length){ box.innerHTML='<p class="muted">No groups yet.</p>'; return; }
+  let html="";
+  for(const g of rows){
+    const builds = buildsData[g.id] || [];
+    const cur = g.currentVersion;
+    html += `<div class="grp"><div class="gh"><span class="gn">${esc(g.group||g.id)}</span></div>`;
+    html += `<div class="cnt">🎽 baton: ${g.batonName? "<b>"+esc(g.batonName)+"</b>" : "(nobody)"}`
+          + (g.batonName? ` <button class="mini-act" data-free="${esc(g.id)}">free baton</button>` : ``)
+          + `</div>`;
+    if(!builds.length){ html += `<div class="none">no build shared yet</div>`; }
+    else {
+      html += `<div class="builds">`;
+      for(const b of builds){
+        const isCur = b.version === cur;
+        html += `<div class="bd${isCur?' cur':''}">`
+          + `<span class="bv">v${b.version}${isCur?' · current':''}</span>`
+          + `<a href="${esc(b.link)}" target="_blank">open</a>`
+          + `<span class="muted">${esc(b.by||'')}${b.at?(' · '+fmt(b.at)):''}</span>`
+          + (isCur? `` : `<button class="mini-act" data-restore="${esc(g.id)}|${b.version}">restore this</button>`)
+          + `</div>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  box.innerHTML=html;
+}
+async function restoreVersion(gid, version, link){
+  if(!window.confirm("Restore this group to v"+version+" and free the baton?")) return;
+  try{ await setDoc(doc(db,"groups",gid), { buildLink:link, currentVersion:version, updatedAt:serverTimestamp(), updatedBy:"↩ restored to v"+version+" (moderator)", batonUid:"", batonName:"" }, {merge:true}); }
+  catch(e){ alert("Restore failed: "+(e.code||e.message)); }
+}
+async function freeBaton(gid){
+  try{ await setDoc(doc(db,"groups",gid), { batonUid:"", batonName:"" }, {merge:true}); }
+  catch(e){ alert("Couldn't free baton: "+(e.code||e.message)); }
+}
+document.getElementById("groups").addEventListener("click", async (e)=>{
+  const r=e.target.closest("[data-restore]"), f=e.target.closest("[data-free]");
+  if(r){ const [gid,ver]=r.dataset.restore.split("|"); const b=(buildsData[gid]||[]).find(x=>String(x.version)===ver); if(b) await restoreVersion(gid, Number(ver), b.link); }
+  else if(f){ await freeBaton(f.dataset.free); }
+});
+
 function startDashboard(){
   unsubs.forEach(u=>u&&u()); unsubs=[];
-  // Groups
+  Object.values(buildUnsubs).forEach(u=>u&&u()); buildUnsubs={}; buildsData={}; groupsData=[];
+  // Groups + per-group versioned build history
   unsubs.push(onSnapshot(collection(db,"groups"), snap=>{
-    const box=document.getElementById("groups"); let html=""; let n=0;
-    const rows=[]; snap.forEach(d=>rows.push({id:d.id, ...d.data()}));
-    rows.sort((a,b)=>(a.group||a.id).localeCompare(b.group||b.id));
-    n=rows.length;
-    if(!rows.length) html='<p class="muted">No groups yet.</p>';
-    for(const g of rows){
-      const link=g.buildLink;
-      html += `<div class="grp"><div class="gh"><span class="gn">${esc(g.group||g.id)}</span></div>`
-        + `<div class="cnt">🎽 baton: ${g.batonName ? "<b>"+esc(g.batonName)+"</b>" : "(nobody)"}</div>`
-        + (link? `<div><a href="${esc(link)}" target="_blank">${esc(link)}</a></div>` : `<div class="none">no build shared yet</div>`)
-        + (g.updatedBy? `<div class="cnt">last shared by ${esc(g.updatedBy)}${g.updatedAt?(" · "+fmt(g.updatedAt)):""}</div>` : "")
-        + `</div>`;
-    }
-    box.innerHTML=html;
-    document.getElementById("sGroups").textContent=n;
+    groupsData=[]; snap.forEach(d=>groupsData.push({id:d.id, ...d.data()}));
+    groupsData.forEach(g=>{
+      if(!buildUnsubs[g.id]){
+        buildUnsubs[g.id] = onSnapshot(query(collection(db,"groups",g.id,"builds"), orderBy("version","desc")), bs=>{
+          buildsData[g.id]=[]; bs.forEach(bd=>buildsData[g.id].push(bd.data())); renderGroups();
+        });
+      }
+    });
+    document.getElementById("sGroups").textContent = groupsData.length;
+    renderGroups();
   }));
   // Roster
   unsubs.push(onSnapshot(collection(db,"attendees"), snap=>{

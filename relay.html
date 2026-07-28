@@ -188,6 +188,7 @@ let added = JSON.parse(localStorage.getItem("ctw_added") || "[]");
 let liveBuild = "";
 let buildUnsub = null;
 let batonHolderUid = "";
+let liveBuildCount = 0;
 
 document.getElementById("basePrompt").textContent = TREE[0].branches[0].prompt;
 // prefill sign-in from last time
@@ -249,6 +250,7 @@ function watchBuild(){
   buildUnsub = onSnapshot(doc(db,"groups",me.gid), snap=>{
     const d = snap.exists() ? snap.data() : {};
     liveBuild = d.buildLink || "";
+    liveBuildCount = d.buildCount || 0;
     batonHolderUid = d.batonUid || "";
     const holderName = d.batonName || "";
     const iHave = batonHolderUid && batonHolderUid === me.uid;
@@ -270,7 +272,7 @@ function watchBuild(){
     btn.classList.toggle("pass", !!iHave);
 
     const live=document.getElementById("cbLive");
-    if(liveBuild){ const by=d.updatedBy; live.textContent = "● live" + (by?(" · last shared by "+by):""); }
+    if(liveBuild){ const by=d.updatedBy; const v=d.currentVersion; live.textContent = "● live" + (v?(" · v"+v):"") + (by?(" · "+by):""); }
     else live.textContent = "";
   }, err=>{ document.getElementById("cbLive").textContent = "(offline)"; });
 }
@@ -287,9 +289,14 @@ async function toggleBaton(){
 async function saveBuild(){
   if(!me.gid || batonHolderUid !== me.uid) return;   // only the baton holder can save
   const link=document.getElementById("buildLink").value.trim();
-  // Saving the link shares it AND frees the baton for the next person to grab.
-  try{ await setDoc(doc(db,"groups",me.gid), { buildLink:link, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name, batonUid:"", batonName:"" }, {merge:true}); }
-  catch(e){ document.getElementById("cbLive").textContent = "couldn't save ("+(e.code||"error")+")"; }
+  if(!link) return;
+  const newVer = (liveBuildCount || 0) + 1;
+  try{
+    // 1) append an immutable version to history — no build is ever overwritten
+    await addDoc(collection(db,"groups",me.gid,"builds"), { version:newVer, link, by:me.name, uid:me.uid, at:serverTimestamp() });
+    // 2) point the group at the new version AND free the baton for the next person
+    await setDoc(doc(db,"groups",me.gid), { buildLink:link, buildCount:newVer, currentVersion:newVer, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name, batonUid:"", batonName:"" }, {merge:true});
+  }catch(e){ document.getElementById("cbLive").textContent = "couldn't save ("+(e.code||"error")+")"; }
 }
 function openBuild(){ if(liveBuild) window.open(liveBuild,"_blank"); }
 
