@@ -62,6 +62,12 @@
   .play-back{ font:inherit; font-size:15px; font-weight:800; color:#2a1500; background:var(--acc); border:0; border-radius:10px; padding:10px 16px; cursor:pointer; }
   .play-title{ font-size:12.5px; color:var(--sub); font-weight:700; }
   #playFrame{ flex:1; width:100%; border:0; background:#fff; }
+  .ovr{ border:1.5px solid color-mix(in srgb, var(--acc) 45%, var(--line)); border-radius:12px; background:var(--card); padding:12px 14px; margin:0 0 8px; }
+  .ovr textarea{ width:100%; min-height:80px; resize:vertical; font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.4; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:9px; padding:10px; }
+  .ovr-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:9px; }
+  .ovr select{ font:inherit; font-size:14px; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:8px; padding:9px 10px; }
+  .ovr .g-btn{ padding:9px 16px; font-size:14px; }
+  .ovr .hint{ font-size:12px; color:var(--sub); margin:8px 0 0; }
 </style>
 </head>
 <body>
@@ -97,6 +103,18 @@
       <div class="stat"><div class="n" id="sUpg">0</div><div class="l">Upgrades added</div></div>
     </div>
 
+    <h3>🛟 Override — inject a build (rescue)</h3>
+    <div class="ovr">
+      <textarea id="ovrCode" placeholder="Paste a complete, known-good HTML build here (starts with <!DOCTYPE html>)…"></textarea>
+      <div class="ovr-row">
+        <span class="muted">Set as</span>
+        <select id="ovrTarget"></select>
+        <button class="g-btn" id="ovrBtn">Set current build</button>
+        <span class="muted" id="ovrMsg"></span>
+      </div>
+      <p class="hint">Bypasses the baton and drops this build straight into the chosen group's current slot (kept in version history so you can undo it). "All groups" pushes the same build to every group at once — your break-glass fallback.</p>
+    </div>
+
     <h3>Groups &amp; current builds</h3>
     <div id="groups"></div>
 
@@ -120,14 +138,14 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc, serverTimestamp, arrayUnion, arrayRemove, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc, serverTimestamp, arrayUnion, arrayRemove, getDocs, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig, MODERATOR_EMAIL } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v10";   // ← bump this each time we edit the app
+const APP_VERSION = "v11";   // ← bump this each time we edit the app
 const gate=document.getElementById("gate"), dash=document.getElementById("dash");
 const gateErr=document.getElementById("gateErr"), signoutBtn=document.getElementById("signout");
 document.getElementById("ver").textContent = APP_VERSION;
@@ -165,6 +183,43 @@ window.__saveGroupCount = async ()=>{
 
 const fmt = ts => { try{ return ts&&ts.toDate ? ts.toDate().toLocaleString() : ""; }catch(e){ return ""; } };
 const esc = s => (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const groupId = g => (g||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "group";
+
+// ---- Override / rescue: inject a build straight into a group's current slot ----
+function populateOvrTargets(n){
+  const sel=document.getElementById("ovrTarget"); if(!sel) return;
+  const prev=sel.value;
+  sel.innerHTML = '<option value="__all__">⚠ All groups</option>' + Array.from({length:n},(_,i)=>`<option value="Group ${i+1}">Group ${i+1}</option>`).join("");
+  if(prev){ const o=[...sel.options].find(x=>x.value===prev); if(o) sel.value=prev; }
+}
+async function injectBuild(groupName, code){
+  const gid = groupId(groupName);
+  const g = (groupsData||[]).find(x=>x.id===gid);
+  const newVer = ((g && g.buildCount) || 0) + 1;
+  await addDoc(collection(db,"groups",gid,"builds"), { version:newVer, code, by:"moderator override", uid:"", at:serverTimestamp() });
+  await setDoc(doc(db,"groups",gid), { buildCode:code, buildCount:newVer, currentVersion:newVer, group:groupName, updatedAt:serverTimestamp(), updatedBy:"↪ moderator override", updatedByUid:"", batonUid:"", batonName:"" }, {merge:true});
+}
+document.getElementById("ovrBtn").addEventListener("click", async ()=>{
+  const code=document.getElementById("ovrCode").value.trim();
+  const target=document.getElementById("ovrTarget").value;
+  const msg=document.getElementById("ovrMsg"), btn=document.getElementById("ovrBtn");
+  if(!code){ msg.textContent="Paste a build first."; return; }
+  if(!/<\s*(!doctype|html|head|body|div|button|script|style|svg|canvas|main|section|h1)/i.test(code)){ msg.textContent="⚠️ That doesn't look like HTML code."; return; }
+  btn.disabled=true; msg.textContent="working…";
+  try{
+    if(target==="__all__"){
+      const n = Math.max(1, Math.min(40, parseInt(document.getElementById("grpCount").value,10)||6));
+      if(!window.confirm("Push this build to ALL "+n+" groups' current slot? This overrides whatever each group has now.")){ msg.textContent=""; btn.disabled=false; return; }
+      for(let i=1;i<=n;i++){ await injectBuild("Group "+i, code); }
+      msg.textContent="✅ Pushed to all "+n+" groups.";
+    } else {
+      await injectBuild(target, code);
+      msg.textContent="✅ Set as "+target+"'s current build.";
+    }
+  }catch(e){ msg.textContent="Failed: "+(e.code||e.message); }
+  btn.disabled=false;
+});
+populateOvrTargets(6);
 
 onAuthStateChanged(auth, user=>{
   if(user && user.email === MODERATOR_EMAIL){
@@ -291,7 +346,9 @@ function startDashboard(){
   Object.values(buildUnsubs).forEach(u=>u&&u()); buildUnsubs={}; buildsData={}; groupsData=[];
   // workshop settings — reflect the saved group count in the control
   unsubs.push(onSnapshot(doc(db,"config","workshop"), snap=>{
-    if(snap.exists() && snap.data().groupCount){ document.getElementById("grpCount").value = snap.data().groupCount; }
+    const n = (snap.exists() && Number(snap.data().groupCount)>0) ? Number(snap.data().groupCount) : 6;
+    document.getElementById("grpCount").value = n;
+    populateOvrTargets(n);
   }));
   // Groups + per-group versioned build history
   unsubs.push(onSnapshot(collection(db,"groups"), snap=>{
