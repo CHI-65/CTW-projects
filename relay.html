@@ -138,7 +138,7 @@
     <p class="lede">So your group shares one build and we can celebrate who added what.</p>
     <div class="card">
       <div class="field"><label>Your name</label><input id="inName" autocomplete="name" placeholder="First name is fine"></div>
-      <div class="field"><label>Email</label><input id="inEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
+      <div class="field"><label>Email <span style="font-weight:400;opacity:.7">(optional)</span></label><input id="inEmail" type="email" autocomplete="email" placeholder="you@example.com — optional"></div>
       <div class="field"><label>Group</label><select id="inGroup"><option value="" disabled selected>Choose your group…</option></select></div>
       <div class="signin-err" id="signinErr"></div>
       <button class="big" id="joinBtn" style="width:100%" onclick="doSignIn()">Join the relay →</button>
@@ -232,7 +232,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v7";   // ← bump this each time we edit the app
+const APP_VERSION = "v8";   // ← bump this each time we edit the app
 const FRAME = "Add exactly this one feature to my drum machine and give me back the complete updated file, keeping everything else working exactly as it is:\n\n";
 const CODE_TAIL = "\n\nHere is the group's complete current file. Update THIS exact file and give the whole thing back as one file:\n\n";
 const MAX_CODE = 900000; // Firestore doc limit is ~1 MiB; keep a safety margin
@@ -298,8 +298,8 @@ async function doSignIn(){
   const email=document.getElementById("inEmail").value.trim();
   const group=document.getElementById("inGroup").value.trim();
   const err=document.getElementById("signinErr");
-  if(!name || !email || !group){ err.textContent="Please fill in all three."; return; }
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent="That email looks off."; return; }
+  if(!name || !group){ err.textContent="Please enter your name and pick your group."; return; }
+  if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent="That email looks off — fix it or leave it blank."; return; }
   const btn=document.getElementById("joinBtn"); btn.disabled=true; err.textContent="";
   try{
     const cred = await signInAnonymously(auth);
