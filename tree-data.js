@@ -5,7 +5,7 @@
 // (Advanced refinements were set aside; add them later as new standalone upgrades.)
 window.RELAY_TREE = [
   { id:"1", em:"🌳", name:"STEP 1 — Base machine", everyone:true, branches:[
-    { id:"1", name:"Base machine", badges:"~4m", prompt:"Build me a 16-step drum machine as a single self-contained HTML page. Four instrument rows — kick, snare, hi-hat, clap — each a row of 16 tap buttons that toggle on and off. Add a Play/Stop button and a tempo slider from 60 to 180 BPM (default 96). Generate every sound with the Web Audio API — no audio files. Make it work with touch on a phone." },
+    { id:"1", name:"Base machine", badges:"~4m", prompt:"Build me a 16-step drum machine as a single self-contained HTML page. Four instrument rows — kick, snare, hi-hat, clap — each a row of 16 tap buttons that toggle on and off. Add a Play/Stop button and a tempo slider from 60 to 180 BPM (default 96). Generate every sound with the Web Audio API — no audio files. Make it work with touch on a phone. Important: make the sound play on iPhones even when the phone's ring/silent switch is set to silent — on the very first tap, resume the AudioContext and also briefly play a short silent clip through a normal HTML5 <audio> element, so the audio routes to the media channel that silent mode doesn't mute." },
   ]},
 
   { id:"A", em:"🎤", name:"Sampler", branches:[
