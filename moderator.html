@@ -19,6 +19,7 @@
   button{ font:inherit; cursor:pointer; }
   .g-btn{ font-size:15px; font-weight:800; color:#2a1500; background:var(--acc); border:0; border-radius:12px; padding:13px 22px; }
   .tbtn{ font-size:12.5px; font-weight:700; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:9px; padding:7px 11px; }
+  .ver{ font-size:11px; font-weight:800; color:var(--sub); border:1px solid var(--line); border-radius:999px; padding:2px 8px; }
   .gate{ text-align:center; padding:60px 12px; }
   .gate h2{ font-size:22px; margin:0 0 8px; }
   .gate p{ color:var(--sub); max-width:40ch; margin:0 auto 22px; }
@@ -55,6 +56,7 @@
 <div class="wrap">
   <div class="bar">
     <h1>Beat Relay · <b>Moderator</b></h1>
+    <span class="ver" id="ver"></span>
     <span class="sp"></span>
     <button class="tbtn" onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='light'?'dark':'light')">◑</button>
     <button class="tbtn" id="signout" style="display:none" onclick="window.__signout()">Sign out</button>
@@ -104,8 +106,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const APP_VERSION = "v1";   // ← bump this each time we edit the app
 const gate=document.getElementById("gate"), dash=document.getElementById("dash");
 const gateErr=document.getElementById("gateErr"), signoutBtn=document.getElementById("signout");
+document.getElementById("ver").textContent = APP_VERSION;
 let unsubs=[];
 
 window.__signin = async ()=>{
