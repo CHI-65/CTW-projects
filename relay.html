@@ -198,6 +198,10 @@
 </div>
 
 <script src="tree-data.js"></script>
+<script>
+  // Register the (no-cache) service worker so Android can install the app standalone.
+  if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
