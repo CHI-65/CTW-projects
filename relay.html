@@ -98,6 +98,14 @@
   .teach{ font-size:13px; color:var(--acc2); margin-top:12px; }
   .markbtn{ font:inherit; font-size:13.5px; font-weight:700; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:10px; padding:11px 16px; cursor:pointer; width:100%; margin-top:10px; }
   .markbtn.added{ background:color-mix(in srgb, var(--ok) 22%, var(--card)); border-color:var(--ok); }
+  /* play overlay — jam on the build in-app, with a clear way back */
+  #playOverlay{ position:fixed; inset:0; z-index:2000; background:var(--paper); display:none; flex-direction:column; }
+  #playOverlay.on{ display:flex; }
+  .play-bar{ display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--card); border-bottom:1px solid var(--line); }
+  .play-back{ font:inherit; font-size:15px; font-weight:800; color:#2a1500; background:var(--acc); border:0; border-radius:10px; padding:10px 16px; cursor:pointer; flex-shrink:0; }
+  .play-new{ font:inherit; font-size:13px; font-weight:800; color:#12240a; background:var(--ok); border:0; border-radius:10px; padding:9px 13px; cursor:pointer; flex-shrink:0; animation:buzz 1s ease-in-out infinite; }
+  .play-title{ font-size:12.5px; color:var(--sub); font-weight:700; }
+  #playFrame{ flex:1; width:100%; border:0; background:#fff; }
 </style>
 </head>
 <body>
@@ -199,6 +207,16 @@
   </section>
 </div>
 
+<!-- PLAY overlay: the current build in-app, with a way back + a flashing "new version" link -->
+<div id="playOverlay">
+  <div class="play-bar">
+    <button class="play-back" onclick="closePlay()">← Back to the relay</button>
+    <button class="play-new" id="playNewBtn" style="display:none" onclick="loadLatest()"></button>
+    <span class="play-title" id="playTitle">🎧 Jamming on the latest build</span>
+  </div>
+  <iframe id="playFrame" title="Your group's build" sandbox="allow-scripts allow-same-origin allow-popups allow-downloads allow-modals allow-forms"></iframe>
+</div>
+
 <script src="tree-data.js"></script>
 <script>
   // Register the (no-cache) service worker so Android can install the app standalone.
@@ -214,7 +232,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v6";   // ← bump this each time we edit the app
+const APP_VERSION = "v7";   // ← bump this each time we edit the app
 const FRAME = "Add exactly this one feature to my drum machine and give me back the complete updated file, keeping everything else working exactly as it is:\n\n";
 const CODE_TAIL = "\n\nHere is the group's complete current file. Update THIS exact file and give the whole thing back as one file:\n\n";
 const MAX_CODE = 900000; // Firestore doc limit is ~1 MiB; keep a safety margin
@@ -230,6 +248,7 @@ TREE.forEach(t => { if(!t.everyone) t.branches.forEach(b => MAP[t.id+"|"+b.id] =
 let me = { uid:null, name:null, email:null, group:null, gid:null };
 let added = JSON.parse(localStorage.getItem("ctw_added") || "[]");
 let liveCode = "";
+let playingVersion = 0;      // which version the Play overlay is currently showing
 let buildUnsub = null;
 let batonHolderUid = "";
 let batonHolderName = "";
@@ -334,6 +353,12 @@ function watchBuild(){
     const live=document.getElementById("cbLive");
     if(liveCode){ const by=d.updatedBy; const v=d.currentVersion; live.textContent = "● live" + (v?(" · v"+v):"") + (by?(" · "+by):""); }
     else live.textContent = "";
+    // if the Play overlay is open and a newer version has landed, flash a "new version" link
+    if(document.getElementById("playOverlay").classList.contains("on") && liveBuildCount > playingVersion){
+      const nb=document.getElementById("playNewBtn");
+      nb.textContent = "🔔 New v"+liveBuildCount+" available — tap to load";
+      nb.style.display = "inline-block";
+    }
     renderHub();
   }, err=>{ document.getElementById("cbLive").textContent = "(offline)"; });
 }
@@ -486,13 +511,23 @@ async function saveBuild(){
 // Play the current build by rendering its code in a fresh tab (no publishing needed).
 function playBuild(){
   if(!liveCode) return;
-  const w = window.open("", "_blank");
-  if(w && w.document){ w.document.open(); w.document.write(liveCode); w.document.close(); return; }
-  // popup blocked → fall back to a Blob URL opened via a tapped link (keeps the user gesture)
-  const url = URL.createObjectURL(new Blob([liveCode], {type:"text/html"}));
-  const a = document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener";
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  loadIntoFrame();
+  document.getElementById("playNewBtn").style.display = "none";
+  document.getElementById("playOverlay").classList.add("on");
+}
+function loadIntoFrame(){
+  document.getElementById("playFrame").srcdoc = liveCode;
+  playingVersion = liveBuildCount;
+  document.getElementById("playTitle").textContent = "🎧 Jamming on v" + (liveBuildCount||1);
+}
+function loadLatest(){
+  loadIntoFrame();
+  document.getElementById("playNewBtn").style.display = "none";
+}
+function closePlay(){
+  document.getElementById("playOverlay").classList.remove("on");
+  document.getElementById("playFrame").srcdoc = "";   // stop audio
+  document.getElementById("playNewBtn").style.display = "none";
 }
 function copyBuild(btn){ if(liveCode) doCopy(liveCode, btn); }
 
@@ -572,7 +607,7 @@ function toggleAdded(key, label){
 onAuthStateChanged(auth, u=>{ if(u) me.uid = me.uid || u.uid; });
 
 // expose handlers for inline onclick
-Object.assign(window, { show, toggleTheme, doSignIn, switchAttendee, grabBaton, passBaton, copyEl, saveBuild, playBuild, copyBuild, openDetail });
+Object.assign(window, { show, toggleTheme, doSignIn, switchAttendee, grabBaton, passBaton, copyEl, saveBuild, playBuild, loadLatest, closePlay, copyBuild, openDetail });
 </script>
 </body>
 </html>

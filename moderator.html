@@ -56,6 +56,12 @@
   .ctrls{ margin-top:9px; display:flex; gap:7px; flex-wrap:wrap; }
   .mini-act.danger{ color:var(--err); border-color:color-mix(in srgb, var(--err) 45%, var(--line)); }
   .mini-act.danger:hover{ border-color:var(--err); }
+  #playOverlay{ position:fixed; inset:0; z-index:2000; background:var(--paper); display:none; flex-direction:column; }
+  #playOverlay.on{ display:flex; }
+  .play-bar{ display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--card); border-bottom:1px solid var(--line); }
+  .play-back{ font:inherit; font-size:15px; font-weight:800; color:#2a1500; background:var(--acc); border:0; border-radius:10px; padding:10px 16px; cursor:pointer; }
+  .play-title{ font-size:12.5px; color:var(--sub); font-weight:700; }
+  #playFrame{ flex:1; width:100%; border:0; background:#fff; }
 </style>
 </head>
 <body>
@@ -102,6 +108,15 @@
   </section>
 </div>
 
+<!-- PLAY overlay: view a build in-app, with a way back -->
+<div id="playOverlay">
+  <div class="play-bar">
+    <button class="play-back" onclick="window.__closePlay()">← Back to dashboard</button>
+    <span class="play-title">🎧 Previewing a group's build</span>
+  </div>
+  <iframe id="playFrame" title="Group build" sandbox="allow-scripts allow-same-origin allow-popups allow-downloads allow-modals allow-forms"></iframe>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -112,7 +127,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v6";   // ← bump this each time we edit the app
+const APP_VERSION = "v7";   // ← bump this each time we edit the app
 const gate=document.getElementById("gate"), dash=document.getElementById("dash");
 const gateErr=document.getElementById("gateErr"), signoutBtn=document.getElementById("signout");
 document.getElementById("ver").textContent = APP_VERSION;
@@ -256,13 +271,10 @@ async function resetGroup(gid){
 // Render a stored build's code in a fresh tab (no publishing involved).
 function playCode(code){
   if(!code) return;
-  const w = window.open("", "_blank");
-  if(w && w.document){ w.document.open(); w.document.write(code); w.document.close(); return; }
-  const url = URL.createObjectURL(new Blob([code], {type:"text/html"}));
-  const a = document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener";
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  document.getElementById("playFrame").srcdoc = code;
+  document.getElementById("playOverlay").classList.add("on");
 }
+window.__closePlay = ()=>{ document.getElementById("playOverlay").classList.remove("on"); document.getElementById("playFrame").srcdoc=""; };
 document.getElementById("groups").addEventListener("click", async (e)=>{
   const p=e.target.closest("[data-play]"), r=e.target.closest("[data-restore]"), f=e.target.closest("[data-free]"), a=e.target.closest("[data-allow]"), rv=e.target.closest("[data-revoke]"), u=e.target.closest("[data-undo]"), rs=e.target.closest("[data-reset]");
   if(p){ const [gid,ver]=p.dataset.play.split("|"); const b=(buildsData[gid]||[]).find(x=>String(x.version)===ver); if(b) playCode(b.code); }
