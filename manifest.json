@@ -1,6 +1,6 @@
 {
-  "name": "The Beat Relay",
-  "short_name": "Beat Relay",
+  "name": "CTW Beat Relay",
+  "short_name": "CTW Beat Relay",
   "description": "Compton Tech Week — build a drum machine together, one prompt at a time.",
   "start_url": "./relay.html",
   "scope": "./",

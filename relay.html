@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>The Beat Relay</title>
+<title>CTW Beat Relay</title>
 <!-- Installable web app (Add to Home Screen → opens standalone, always loads fresh) -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#17130e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Beat Relay">
+<meta name="apple-mobile-web-app-title" content="CTW Beat Relay">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <style>
@@ -103,7 +103,7 @@
 <body>
 <div class="wrap">
   <div class="bar">
-    <span class="logo">The <b>Beat Relay</b></span>
+    <span class="logo">CTW <b>Beat Relay</b></span>
     <span class="ver" id="ver"></span>
     <span class="who" id="who"></span>
     <span class="sp"></span>
@@ -214,7 +214,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v3";   // ← bump this each time we edit the app
+const APP_VERSION = "v4";   // ← bump this each time we edit the app
 const FRAME = "Add exactly this one feature to my drum machine and give me back the complete updated file, keeping everything else working exactly as it is:\n\n";
 const CODE_TAIL = "\n\nHere is the group's complete current file. Update THIS exact file and give the whole thing back as one file:\n\n";
 const MAX_CODE = 900000; // Firestore doc limit is ~1 MiB; keep a safety margin

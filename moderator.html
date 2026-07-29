@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Beat Relay — Moderator</title>
+<title>CTW Beat Relay — Moderator</title>
 <style>
   :root{ --paper:#17130e; --acc:#ff8a3d; --acc2:#c084fc; --ok:#b6e528; --ink:#f4ede2; --sub:#b6a891; --line:#3a2f22; --card:#211a13; --card2:#2a2117; --err:#ff7a7a; }
   :root[data-theme="light"]{ --paper:#faf7f2; --acc:#e8590c; --acc2:#7c3aed; --ok:#5f8c00; --ink:#221c15; --sub:#6b6157; --line:#e7ded1; --card:#ffffff; --card2:#f4efe7; --err:#c0342b; }
@@ -58,7 +58,7 @@
 <body>
 <div class="wrap">
   <div class="bar">
-    <h1>Beat Relay · <b>Moderator</b></h1>
+    <h1>CTW Beat Relay · <b>Moderator</b></h1>
     <span class="ver" id="ver"></span>
     <span class="sp"></span>
     <button class="tbtn" onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='light'?'dark':'light')">◑</button>
@@ -109,7 +109,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v3";   // ← bump this each time we edit the app
+const APP_VERSION = "v4";   // ← bump this each time we edit the app
 const gate=document.getElementById("gate"), dash=document.getElementById("dash");
 const gateErr=document.getElementById("gateErr"), signoutBtn=document.getElementById("signout");
 document.getElementById("ver").textContent = APP_VERSION;
