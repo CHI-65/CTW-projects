@@ -207,14 +207,14 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, serverTimestamp, runTransaction, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v2";   // ← bump this each time we edit the app
+const APP_VERSION = "v3";   // ← bump this each time we edit the app
 const FRAME = "Add exactly this one feature to my drum machine and give me back the complete updated file, keeping everything else working exactly as it is:\n\n";
 const CODE_TAIL = "\n\nHere is the group's complete current file. Update THIS exact file and give the whole thing back as one file:\n\n";
 const MAX_CODE = 900000; // Firestore doc limit is ~1 MiB; keep a safety margin
@@ -234,11 +234,24 @@ let buildUnsub = null;
 let batonHolderUid = "";
 let batonHolderName = "";
 let liveBuildCount = 0;
-let lastBuilderUid = "";     // whoever uploaded the current version (they're play-only until someone else builds)
+let builders = [];           // uids of everyone who has already built in this group (one turn each)
+let exceptions = [];         // uids the moderator has cleared to build again
 let autoGrabTried = false;   // first-builder is auto-assigned (no "grab" race for Step 1)
 let buildLoaded = false;     // true once the group's real state has arrived from Firestore
 
 document.getElementById("ver").textContent = APP_VERSION;
+// Auto-refresh: whenever a newer version is published, reload to it (cache-busted). No manual refresh.
+function checkVersion(){
+  fetch("version.json?t="+Date.now(), {cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{
+    const latest = j && j.v;
+    if(latest && latest !== APP_VERSION && sessionStorage.getItem("ctw_reloadedTo") !== latest){
+      sessionStorage.setItem("ctw_reloadedTo", latest);
+      location.replace(location.pathname + "?v=" + encodeURIComponent(latest));
+    }
+  }).catch(()=>{});
+}
+checkVersion(); setInterval(checkVersion, 45000);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) checkVersion(); });
 document.getElementById("basePrompt").textContent = TREE[0].branches[0].prompt;
 // prefill sign-in from last time
 document.getElementById("inName").value = localStorage.getItem("ctw_name")||"";
@@ -292,7 +305,7 @@ async function switchAttendee(){
   try{ if(buildUnsub){ buildUnsub(); buildUnsub=null; } await signOut(auth); }catch(e){}
   me = { uid:null, name:null, email:null, group:null, gid:null };
   added = []; localStorage.removeItem("ctw_added");
-  liveCode = ""; batonHolderUid = ""; batonHolderName = ""; liveBuildCount = 0; lastBuilderUid = ""; autoGrabTried = false; buildLoaded = false;
+  liveCode = ""; batonHolderUid = ""; batonHolderName = ""; liveBuildCount = 0; builders = []; exceptions = []; autoGrabTried = false; buildLoaded = false;
   document.getElementById("inName").value = "";
   document.getElementById("inEmail").value = "";
   document.getElementById("buildCode").value = "";
@@ -313,7 +326,8 @@ function watchBuild(){
     liveBuildCount = d.buildCount || 0;
     batonHolderUid = d.batonUid || "";
     batonHolderName = d.batonName || "";
-    lastBuilderUid = d.updatedByUid || "";
+    builders = d.builders || [];
+    exceptions = d.exceptions || [];
     // Play/Copy available to everyone whenever a build exists
     document.getElementById("playB").disabled = !liveCode;
     document.getElementById("copyBuildB").disabled = !liveCode;
@@ -393,16 +407,16 @@ function renderHub(){
     buzzer.textContent = "🔒 Baton in use — get ready…";
     status.textContent = "🎽 " + (batonHolderName||"Someone") + " is building " + (hasBuild ? "right now." : "the base machine.");
     note.textContent = "You're in the waiting room. Tap ▶ Play above to jam on the current build. The moment they upload, the baton is up for grabs — be the first to tap!";
-  } else if(hasBuild && lastBuilderUid && lastBuilderUid === me.uid){
-    // YOU just built — you're play-only until someone else takes a turn. No re-grab.
+  } else if(hasBuild && builders.includes(me.uid) && !exceptions.includes(me.uid)){
+    // You've already had your ONE turn — locked out until the moderator clears you to build again.
     passBtn.style.display = "none";
     first.style.display = "none";
     upgrade.style.display = "none";
     status.classList.add("mine");
-    status.textContent = "🎽 You just built v" + liveBuildCount + " — nice work! Pass it on.";
+    status.textContent = "🎽 You've already taken your turn in this group.";
     buzzer.classList.add("locked"); buzzer.disabled = true;
-    buzzer.textContent = "🔒 Your turn's done — tap ▶ Play to jam";
-    note.textContent = "The baton goes to someone else next. You can jump back in after another builder takes a turn.";
+    buzzer.textContent = "🔒 One turn each — tap ▶ Play to jam";
+    note.textContent = "Everyone gets one build so the whole group gets a go. Want another turn? Ask the moderator to clear you.";
   } else if(hasBuild){
     // A build exists and the baton is free — the Family Feud upgrade race (for everyone else).
     passBtn.style.display = "none";
@@ -459,7 +473,7 @@ async function saveBuild(){
     // 1) append an immutable version to history — no build is ever overwritten
     await addDoc(collection(db,"groups",me.gid,"builds"), { version:newVer, code, by:me.name, uid:me.uid, at:serverTimestamp() });
     // 2) point the group at the new version AND free the baton for the next person
-    await setDoc(doc(db,"groups",me.gid), { buildCode:code, buildCount:newVer, currentVersion:newVer, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name, updatedByUid:me.uid, batonUid:"", batonName:"" }, {merge:true});
+    await setDoc(doc(db,"groups",me.gid), { buildCode:code, buildCount:newVer, currentVersion:newVer, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name, updatedByUid:me.uid, builders:arrayUnion(me.uid), exceptions:arrayRemove(me.uid), batonUid:"", batonName:"" }, {merge:true});
     document.getElementById("buildCode").value = "";
     live.textContent = "✅ Uploaded v"+newVer+" — baton freed for the next builder!";
   }catch(e){ live.textContent = "couldn't upload ("+(e.code||"error")+")"; }

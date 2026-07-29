@@ -50,6 +50,9 @@
   .bd.cur{ color:var(--ink); }
   .bv{ font-weight:800; }
   .bd a{ color:var(--acc2); }
+  .okc{ color:var(--ok); font-weight:700; }
+  .turns{ font-size:12.5px; color:var(--sub); margin-top:6px; }
+  .turns .lbl{ font-weight:700; color:var(--ink); }
 </style>
 </head>
 <body>
@@ -99,17 +102,29 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc, serverTimestamp, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig, MODERATOR_EMAIL } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v2";   // ← bump this each time we edit the app
+const APP_VERSION = "v3";   // ← bump this each time we edit the app
 const gate=document.getElementById("gate"), dash=document.getElementById("dash");
 const gateErr=document.getElementById("gateErr"), signoutBtn=document.getElementById("signout");
 document.getElementById("ver").textContent = APP_VERSION;
+// Auto-refresh: whenever a newer version is published, reload to it (cache-busted). No manual refresh.
+function checkVersion(){
+  fetch("version.json?t="+Date.now(), {cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{
+    const latest = j && j.v;
+    if(latest && latest !== APP_VERSION && sessionStorage.getItem("ctw_reloadedTo") !== latest){
+      sessionStorage.setItem("ctw_reloadedTo", latest);
+      location.replace(location.pathname + "?v=" + encodeURIComponent(latest));
+    }
+  }).catch(()=>{});
+}
+checkVersion(); setInterval(checkVersion, 45000);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) checkVersion(); });
 let unsubs=[];
 
 window.__signin = async ()=>{
@@ -161,6 +176,19 @@ function renderGroups(){
     html += `<div class="cnt">🎽 baton: ${g.batonName? "<b>"+esc(g.batonName)+"</b>" : "(nobody)"}`
           + (g.batonName? ` <button class="mini-act" data-free="${esc(g.id)}">free baton</button>` : ``)
           + `</div>`;
+    // one turn each — who has already built, with a moderator "let build again" exception
+    const turnMap = {};
+    for(const b of builds){ if(b.uid) turnMap[b.uid] = b.by || b.uid; }
+    const exceptions = g.exceptions || [];
+    const turnUids = Object.keys(turnMap);
+    if(turnUids.length){
+      html += `<div class="turns"><span class="lbl">🧢 Had a turn:</span> ` + turnUids.map(uid=>{
+        const nm = esc(turnMap[uid]);
+        return exceptions.includes(uid)
+          ? `${nm} <span class="okc">✓ can build again</span> <button class="mini-act" data-revoke="${esc(g.id)}|${esc(uid)}">undo</button>`
+          : `${nm} <button class="mini-act" data-allow="${esc(g.id)}|${esc(uid)}">let build again</button>`;
+      }).join(" &nbsp; ") + `</div>`;
+    }
     if(!builds.length){ html += `<div class="none">no build shared yet</div>`; }
     else {
       html += `<div class="builds">`;
@@ -188,6 +216,14 @@ async function freeBaton(gid){
   try{ await setDoc(doc(db,"groups",gid), { batonUid:"", batonName:"" }, {merge:true}); }
   catch(e){ alert("Couldn't free baton: "+(e.code||e.message)); }
 }
+async function allowAgain(gid, uid){
+  try{ await setDoc(doc(db,"groups",gid), { exceptions: arrayUnion(uid) }, {merge:true}); }
+  catch(e){ alert("Couldn't clear them to build again: "+(e.code||e.message)); }
+}
+async function revokeAgain(gid, uid){
+  try{ await setDoc(doc(db,"groups",gid), { exceptions: arrayRemove(uid) }, {merge:true}); }
+  catch(e){ alert("Couldn't undo: "+(e.code||e.message)); }
+}
 // Render a stored build's code in a fresh tab (no publishing involved).
 function playCode(code){
   if(!code) return;
@@ -199,10 +235,12 @@ function playCode(code){
   setTimeout(()=>URL.revokeObjectURL(url), 60000);
 }
 document.getElementById("groups").addEventListener("click", async (e)=>{
-  const p=e.target.closest("[data-play]"), r=e.target.closest("[data-restore]"), f=e.target.closest("[data-free]");
+  const p=e.target.closest("[data-play]"), r=e.target.closest("[data-restore]"), f=e.target.closest("[data-free]"), a=e.target.closest("[data-allow]"), rv=e.target.closest("[data-revoke]");
   if(p){ const [gid,ver]=p.dataset.play.split("|"); const b=(buildsData[gid]||[]).find(x=>String(x.version)===ver); if(b) playCode(b.code); }
   else if(r){ const [gid,ver]=r.dataset.restore.split("|"); const b=(buildsData[gid]||[]).find(x=>String(x.version)===ver); if(b) await restoreVersion(gid, Number(ver), b.code); }
   else if(f){ await freeBaton(f.dataset.free); }
+  else if(a){ const [gid,uid]=a.dataset.allow.split("|"); await allowAgain(gid, uid); }
+  else if(rv){ const [gid,uid]=rv.dataset.revoke.split("|"); await revokeAgain(gid, uid); }
 });
 
 function startDashboard(){
