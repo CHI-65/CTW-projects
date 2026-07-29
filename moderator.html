@@ -106,7 +106,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v1";   // ← bump this each time we edit the app
+const APP_VERSION = "v2";   // ← bump this each time we edit the app
 const gate=document.getElementById("gate"), dash=document.getElementById("dash");
 const gateErr=document.getElementById("gateErr"), signoutBtn=document.getElementById("signout");
 document.getElementById("ver").textContent = APP_VERSION;
@@ -181,7 +181,7 @@ function renderGroups(){
 }
 async function restoreVersion(gid, version, code){
   if(!window.confirm("Restore this group to v"+version+" and free the baton?")) return;
-  try{ await setDoc(doc(db,"groups",gid), { buildCode:code, currentVersion:version, updatedAt:serverTimestamp(), updatedBy:"↩ restored to v"+version+" (moderator)", batonUid:"", batonName:"" }, {merge:true}); }
+  try{ await setDoc(doc(db,"groups",gid), { buildCode:code, currentVersion:version, updatedAt:serverTimestamp(), updatedBy:"↩ restored to v"+version+" (moderator)", updatedByUid:"", batonUid:"", batonName:"" }, {merge:true}); }
   catch(e){ alert("Restore failed: "+(e.code||e.message)); }
 }
 async function freeBaton(gid){
