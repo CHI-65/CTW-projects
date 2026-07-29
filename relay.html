@@ -218,6 +218,8 @@ let buildUnsub = null;
 let batonHolderUid = "";
 let batonHolderName = "";
 let liveBuildCount = 0;
+let autoGrabTried = false;   // first-builder is auto-assigned (no "grab" race for Step 1)
+let buildLoaded = false;     // true once the group's real state has arrived from Firestore
 
 document.getElementById("basePrompt").textContent = TREE[0].branches[0].prompt;
 // prefill sign-in from last time
@@ -257,6 +259,7 @@ async function doSignIn(){
     document.getElementById("who").textContent = name + " · " + group;
     document.getElementById("cbGroup").textContent = group;
     document.getElementById("switchBtn").style.display = "inline-block";   // TEMP · test-only
+    autoGrabTried = false; buildLoaded = false;
     watchBuild();
     show("options");
   }catch(e){
@@ -271,7 +274,7 @@ async function switchAttendee(){
   try{ if(buildUnsub){ buildUnsub(); buildUnsub=null; } await signOut(auth); }catch(e){}
   me = { uid:null, name:null, email:null, group:null, gid:null };
   added = []; localStorage.removeItem("ctw_added");
-  liveCode = ""; batonHolderUid = ""; batonHolderName = ""; liveBuildCount = 0;
+  liveCode = ""; batonHolderUid = ""; batonHolderName = ""; liveBuildCount = 0; autoGrabTried = false; buildLoaded = false;
   document.getElementById("inName").value = "";
   document.getElementById("inEmail").value = "";
   document.getElementById("buildCode").value = "";
@@ -286,6 +289,7 @@ async function switchAttendee(){
 function watchBuild(){
   if(buildUnsub) buildUnsub();
   buildUnsub = onSnapshot(doc(db,"groups",me.gid), snap=>{
+    buildLoaded = true;
     const d = snap.exists() ? snap.data() : {};
     liveCode = d.buildCode || "";
     liveBuildCount = d.buildCount || 0;
@@ -309,6 +313,17 @@ function renderHub(){
   const iHave  = batonHolderUid && batonHolderUid === me.uid;
   const held   = !!batonHolderUid;
   const hasBuild = liveBuildCount > 0;
+
+  // FIRST BUILD: no "grab the baton" race for Step 1. The first person in the room
+  // is quietly handed the base build; everyone else waits. (Atomic, so only one wins.)
+  // Only decide this once the group's REAL state has loaded from Firestore, so we
+  // never auto-grab a group that already has a build/holder.
+  if(buildLoaded && me.uid && !hasBuild && !held && !autoGrabTried){
+    autoGrabTried = true;
+    grabBaton(true);          // silent — re-renders when the snapshot lands
+    return;
+  }
+
   const status = document.getElementById("bzStatus");
   const buzzer = document.getElementById("buzzer");
   const passBtn= document.getElementById("passBtn");
@@ -318,46 +333,71 @@ function renderHub(){
 
   status.className = "bz-status";
   buzzer.className = "buzzer";
+  buzzer.disabled = false;
+  buzzer.style.display = "block";
   document.getElementById("uploadRow").style.display = iHave ? "block" : "none";
 
-  if(iHave){
-    passBtn.style.display = "block";
-    buzzer.style.display = "none";
+  if(!buildLoaded){
+    status.textContent = "🎽 Connecting to your group…";
+    buzzer.classList.add("locked"); buzzer.disabled = true; buzzer.textContent = "…";
+    passBtn.style.display = "none"; first.style.display = "none"; upgrade.style.display = "none";
+    document.getElementById("uploadRow").style.display = "none";
+    return;
+  }
+
+  if(iHave && !hasBuild){
+    // First builder — no baton to grab; just build the base.
     status.classList.add("mine");
-    if(hasBuild){
-      status.textContent = "🎽 You've got the baton — you're up!";
-      note.textContent = "Pick one upgrade below. Its Copy button already includes your group's current build, so paste it into a brand-new Claude chat, then paste the file you get back into the box up top and tap Upload.";
-      first.style.display = "none";
-      upgrade.style.display = "block";
-      renderOptions();
-    } else {
-      status.textContent = "🎽 You've got the baton — you're the first builder!";
-      note.textContent = "Build the base machine below, then paste the file Claude gives you into the box up top and tap Upload.";
-      first.style.display = "block";
-      upgrade.style.display = "none";
-    }
-  } else {
+    status.textContent = "🎽 You're building the base machine.";
+    buzzer.classList.add("locked"); buzzer.disabled = true;
+    buzzer.textContent = "🔒 No baton to grab — you're the first builder";
     passBtn.style.display = "none";
-    buzzer.style.display = "block";
+    note.textContent = "Build the base machine below, paste the file up top, and tap Upload. After that you can just Play the beat.";
+    first.style.display = "block";
+    upgrade.style.display = "none";
+  } else if(iHave && hasBuild){
+    // Holding the baton to add an upgrade.
+    status.classList.add("mine");
+    status.textContent = "🎽 You've got the baton — you're up!";
+    buzzer.style.display = "none";
+    passBtn.style.display = "block";
+    note.textContent = "Pick one upgrade below. Its Copy button already includes your group's current build, so paste it into a brand-new Claude chat, then paste the file you get back into the box up top and tap Upload.";
+    first.style.display = "none";
+    upgrade.style.display = "block";
+    renderOptions();
+  } else if(held){
+    // Someone else is building — waiting room.
+    passBtn.style.display = "none";
     first.style.display = "none";
     upgrade.style.display = "none";
-    if(held){
-      status.textContent = "🎽 " + (batonHolderName||"Someone") + " is building right now.";
-      buzzer.classList.add("locked");
-      buzzer.textContent = "🔒 Baton in use — get ready…";
-      note.textContent = "You're in the waiting room. Tap ▶ Play above to jam on the current build. The moment they upload, the baton is up for grabs — be the first to tap!";
-    } else {
-      status.classList.add("free");
-      status.textContent = "🎽 The baton is UP FOR GRABS!";
-      buzzer.classList.add("live");
-      buzzer.textContent = hasBuild ? "🔔 Grab it — add the next upgrade!" : "🔔 Grab it — be the first to build!";
-      note.textContent = "First to tap wins the baton and builds next.";
-    }
+    buzzer.classList.add("locked"); buzzer.disabled = true;
+    buzzer.textContent = "🔒 Baton in use — get ready…";
+    status.textContent = "🎽 " + (batonHolderName||"Someone") + " is building " + (hasBuild ? "right now." : "the base machine.");
+    note.textContent = "You're in the waiting room. Tap ▶ Play above to jam on the current build. The moment they upload, the baton is up for grabs — be the first to tap!";
+  } else if(hasBuild){
+    // A build exists and the baton is free — the Family Feud upgrade race.
+    passBtn.style.display = "none";
+    first.style.display = "none";
+    upgrade.style.display = "none";
+    status.classList.add("free");
+    status.textContent = "🎽 The baton is UP FOR GRABS!";
+    buzzer.classList.add("live");
+    buzzer.textContent = "🔔 Grab it — add the next upgrade!";
+    note.textContent = "First to tap wins the baton and builds next.";
+  } else {
+    // No build yet and nobody holds it (rare: e.g. the base builder stepped away).
+    passBtn.style.display = "none";
+    first.style.display = "none";
+    upgrade.style.display = "none";
+    buzzer.classList.add("locked"); buzzer.disabled = true;
+    buzzer.textContent = "🔒 Waiting for the base to be built…";
+    status.textContent = "🎽 The base machine hasn't been built yet.";
+    note.textContent = "Hang tight — someone's setting up the base. (Moderator can free the baton if it's stuck.)";
   }
 }
 
 // Family Feud grab: atomic — only the first tap wins, everyone else is told they missed it.
-async function grabBaton(){
+async function grabBaton(silent){
   if(!me.gid || (batonHolderUid && batonHolderUid===me.uid)) return;
   const ref=doc(db,"groups",me.gid);
   const live=document.getElementById("cbLive");
@@ -368,9 +408,9 @@ async function grabBaton(){
       if(cur.batonUid){ const e=new Error("taken"); e.taken=true; throw e; }   // someone holds it already
       tx.set(ref, { batonUid:me.uid, batonName:me.name, batonAt:serverTimestamp(), group:me.group }, {merge:true});
     });
-    live.textContent = "🎉 You got the baton!";
+    if(!silent) live.textContent = "🎉 You got the baton!";
   }catch(e){
-    if(e && e.taken){ live.textContent = "So close — someone grabbed it first. Wait for the next turn!"; }
+    if(e && e.taken){ if(!silent) live.textContent = "So close — someone grabbed it first. Wait for the next turn!"; }
     else{ live.textContent = "couldn't grab the baton ("+(e.code||"error")+")"; }
   }
 }
