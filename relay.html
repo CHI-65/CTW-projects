@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Beat Relay</title>
+<!-- Installable web app (Add to Home Screen → opens standalone, always loads fresh) -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#17130e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Beat Relay">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <style>
   :root{ --paper:#17130e; --acc:#ff8a3d; --acc2:#c084fc; --ok:#b6e528; --ink:#f4ede2; --sub:#b6a891; --line:#3a2f22; --card:#211a13; --card2:#2a2117; --err:#ff7a7a; }
   :root[data-theme="light"]{ --paper:#faf7f2; --acc:#e8590c; --acc2:#7c3aed; --ok:#5f8c00; --ink:#221c15; --sub:#6b6157; --line:#e7ded1; --card:#ffffff; --card2:#f4efe7; --err:#c0342b; }
