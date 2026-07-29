@@ -53,6 +53,9 @@
   .okc{ color:var(--ok); font-weight:700; }
   .turns{ font-size:12.5px; color:var(--sub); margin-top:6px; }
   .turns .lbl{ font-weight:700; color:var(--ink); }
+  .ctrls{ margin-top:9px; display:flex; gap:7px; flex-wrap:wrap; }
+  .mini-act.danger{ color:var(--err); border-color:color-mix(in srgb, var(--err) 45%, var(--line)); }
+  .mini-act.danger:hover{ border-color:var(--err); }
 </style>
 </head>
 <body>
@@ -102,14 +105,14 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc, serverTimestamp, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc, serverTimestamp, arrayUnion, arrayRemove, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig, MODERATOR_EMAIL } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v5";   // ← bump this each time we edit the app
+const APP_VERSION = "v6";   // ← bump this each time we edit the app
 const gate=document.getElementById("gate"), dash=document.getElementById("dash");
 const gateErr=document.getElementById("gateErr"), signoutBtn=document.getElementById("signout");
 document.getElementById("ver").textContent = APP_VERSION;
@@ -203,6 +206,13 @@ function renderGroups(){
       }
       html += `</div>`;
     }
+    // moderator safety controls: undo last upgrade / reset the whole group
+    if(builds.length || g.batonName){
+      html += `<div class="ctrls">`;
+      if(builds.length >= 2){ html += `<button class="mini-act" data-undo="${esc(g.id)}">↩ Undo last upgrade</button>`; }
+      html += `<button class="mini-act danger" data-reset="${esc(g.id)}">⟲ Reset group</button>`;
+      html += `</div>`;
+    }
     html += `</div>`;
   }
   box.innerHTML=html;
@@ -224,6 +234,25 @@ async function revokeAgain(gid, uid){
   try{ await setDoc(doc(db,"groups",gid), { exceptions: arrayRemove(uid) }, {merge:true}); }
   catch(e){ alert("Couldn't undo: "+(e.code||e.message)); }
 }
+async function undoLast(gid){
+  const builds = (buildsData[gid]||[]).slice().sort((a,b)=>b.version-a.version);
+  if(builds.length < 2){ alert("There's no earlier build to go back to — use Reset group instead."); return; }
+  const g = groupsData.find(x=>x.id===gid);
+  const cur = g ? g.currentVersion : builds[0].version;
+  const prev = builds.find(b=>b.version < cur) || builds[1];
+  if(!prev){ alert("No earlier build found."); return; }
+  if(!window.confirm("Go back to v"+prev.version+" for "+((g&&g.group)||gid)+"? This frees the baton.")) return;
+  await restoreVersion(gid, prev.version, prev.code);
+}
+async function resetGroup(gid){
+  const g = groupsData.find(x=>x.id===gid);
+  if(!window.confirm("Reset "+((g&&g.group)||gid)+" completely? This clears its build, all history, the baton, and who's-had-a-turn so the group starts fresh. Can't be undone.")) return;
+  try{
+    const bs = await getDocs(collection(db,"groups",gid,"builds"));
+    await Promise.all(bs.docs.map(d=>deleteDoc(d.ref)));
+    await setDoc(doc(db,"groups",gid), { buildCode:"", buildCount:0, currentVersion:0, updatedBy:"", updatedByUid:"", updatedAt:serverTimestamp(), batonUid:"", batonName:"", builders:[], exceptions:[] }, {merge:true});
+  }catch(e){ alert("Reset failed: "+(e.code||e.message)); }
+}
 // Render a stored build's code in a fresh tab (no publishing involved).
 function playCode(code){
   if(!code) return;
@@ -235,12 +264,14 @@ function playCode(code){
   setTimeout(()=>URL.revokeObjectURL(url), 60000);
 }
 document.getElementById("groups").addEventListener("click", async (e)=>{
-  const p=e.target.closest("[data-play]"), r=e.target.closest("[data-restore]"), f=e.target.closest("[data-free]"), a=e.target.closest("[data-allow]"), rv=e.target.closest("[data-revoke]");
+  const p=e.target.closest("[data-play]"), r=e.target.closest("[data-restore]"), f=e.target.closest("[data-free]"), a=e.target.closest("[data-allow]"), rv=e.target.closest("[data-revoke]"), u=e.target.closest("[data-undo]"), rs=e.target.closest("[data-reset]");
   if(p){ const [gid,ver]=p.dataset.play.split("|"); const b=(buildsData[gid]||[]).find(x=>String(x.version)===ver); if(b) playCode(b.code); }
   else if(r){ const [gid,ver]=r.dataset.restore.split("|"); const b=(buildsData[gid]||[]).find(x=>String(x.version)===ver); if(b) await restoreVersion(gid, Number(ver), b.code); }
   else if(f){ await freeBaton(f.dataset.free); }
   else if(a){ const [gid,uid]=a.dataset.allow.split("|"); await allowAgain(gid, uid); }
   else if(rv){ const [gid,uid]=rv.dataset.revoke.split("|"); await revokeAgain(gid, uid); }
+  else if(u){ await undoLast(u.dataset.undo); }
+  else if(rs){ await resetGroup(rs.dataset.reset); }
 });
 
 function startDashboard(){
