@@ -1,94 +1,47 @@
-// Shared prompt data for the Beat Relay — read by relay-tree.html (flat handout)
-// and relay.html (guided navigator). Edit prompts here once; both views update.
+// Shared prompt data for the Beat Relay.
+// FLAT model: Step 1 = base machine. Every other entry is ONE self-contained upgrade
+// with its 3 simplest refinements already baked into a single prompt — no sub-choices,
+// no dependencies. Each upgrade assumes only the base machine exists, so any order works.
+// (Advanced refinements were set aside; add them later as new standalone upgrades.)
 window.RELAY_TREE = [
-  { id:"1", em:"🌳", name:"STEP 1 — Base machine", note:"Everyone builds this", everyone:true, branches:[
-    { id:"1", name:"Base machine", badges:"~4m · 🟢", st:"✅", prompt:"Build me a 16-step drum machine as a single self-contained HTML page. Four instrument rows — kick, snare, hi-hat, clap — each a row of 16 tap buttons that toggle on and off. Add a Play/Stop button and a tempo slider from 60 to 180 BPM (default 96). Generate every sound with the Web Audio API — no audio files. Make it work with touch on a phone." },
+  { id:"1", em:"🌳", name:"STEP 1 — Base machine", everyone:true, branches:[
+    { id:"1", name:"Base machine", badges:"~4m", prompt:"Build me a 16-step drum machine as a single self-contained HTML page. Four instrument rows — kick, snare, hi-hat, clap — each a row of 16 tap buttons that toggle on and off. Add a Play/Stop button and a tempo slider from 60 to 180 BPM (default 96). Generate every sound with the Web Audio API — no audio files. Make it work with touch on a phone." },
   ]},
-  { id:"A", em:"🎤", name:"Sampler", note:"needs Step 1 · 🌐 mic", branches:[
-    { id:"A", name:"Sampler (trunk)", badges:"~5m · 🟡🌐", st:"✅", prompt:"Add a Sampler: a 'Sampler' button in the top row that opens a panel with a big 'Record' button. Recording captures up to 2 seconds from the microphone, then becomes a new 'Sample' row in the grid I sequence like the drums. Add a Pitch slider (50%–200%, default 100%). If the mic is blocked, show a short plain-English message." },
-    { id:"A1", name:"Trim + Reverse", badges:"~3m · 🟢", st:"✅", prompt:"In the Sampler, draw the recorded sample as a waveform and let me drag the left and right ends to trim it (non-destructive). Add a 'Reverse' button that toggles playing the trimmed sample backwards, highlighted when on. Both affect what the Sample row plays." },
-    { id:"A2", name:"Transpose", badges:"~2m · 🟢", st:"⬜", prompt:"Replace the Sampler's Pitch percent slider with a Transpose slider in semitones, from -12 to +12 (default 0), where playback rate = 2^(semitones/12). Show the value like '+5 st' or '0 st'. Add a small 'Reset' button that returns it to 0." },
-    { id:"A3", name:"Shape (attack/decay)", badges:"~2.5m · 🟡", st:"⬜", prompt:"In the Sampler, add two knobs — 'Attack' (0–200 ms, default 0) and 'Decay' (0–100%, default 100%) — that shape a volume envelope on the sample so I can make it punchy or smooth. Defaults leave the sample sounding unchanged." },
-    { id:"A4", name:"Normalize", badges:"~1.5m · 🟢", st:"⬜", prompt:"In the Sampler, add a 'Normalize' button that boosts the current (trimmed) sample so its loudest peak reaches full volume without clipping, then redraw the waveform." },
-    { id:"A5", name:"EQ (sample)", badges:"~3m · 🟡", st:"⬜", prompt:"In the Sampler, add three knobs — 'Low', 'Mid', 'High' (each -12 to +12 dB, default 0) — that shape only the Sample track's tone. At 0 the sample is unchanged." },
-    { id:"A6", name:"Lo-fi / bitcrush", badges:"~2m · 🟢", st:"⬜", prompt:"In the Sampler, add a 'Lo-fi' knob (0–100%, default 0) that progressively crushes the sample's bit depth and sample rate for a grittier sound. At 0% the sample is unchanged." },
-    { id:"A7", name:"Chop into pads", badges:"~4m · 🟡⚡", st:"⬜", prompt:"In the Sampler, add a 'Chop' control that slices the recorded sample into a chosen number of equal pieces (2 to 8), shown as pads I can tap to preview and sequence each slice on the Sample row." },
+
+  { id:"A", em:"🎤", name:"Sampler", branches:[
+    { id:"A", name:"Sampler", badges:"~7m · needs mic", prompt:"Add a Sampler, with everything in one panel: a 'Sampler' button opens it, and a big Record button captures up to 2 seconds from the microphone and turns it into a new 'Sample' row I sequence like the drums (if the mic is blocked, show a short plain-English message). In the same panel also include: (1) the sample drawn as a waveform where I can drag the left and right ends to trim it, plus a 'Reverse' button to play it backwards; (2) a Transpose slider in semitones from -12 to +12 (default 0); and (3) a 'Normalize' button that lifts the trimmed sample to full volume without clipping." },
   ]},
-  { id:"B", em:"🎛️", name:"Signal FX", note:"needs Step 1 · send & creative effects — pick any", branches:[
-    { id:"B1", name:"Echo", badges:"~3.5m · 🟢", st:"✅", prompt:"Add a tempo-synced delay/echo. A 'Delay' button opens a panel with: a note-value selector (1/4, 1/8, 1/16) that locks the echo time to the tempo, a feedback amount, a wet level, and a 'send' slider per drum (default 0) for how much of each drum goes into the echo. At default sends the sound is unchanged." },
-    { id:"B2", name:"Reverb (send)", badges:"~2m · 🟢", st:"✅", prompt:"Add Reverb as a send effect, matching the delay's per-drum sends — NOT on the master. Create a reverb unit fed by a 'Reverb send' slider per track (default 0) that returns into the mix in parallel (a send/return bus). Add one reverb size/decay control. At 0 sends the sound is unchanged." },
-    { id:"B3", name:"Filter sweep", badges:"~3.5m · 🟢", st:"✅", prompt:"Add a filter on the whole mix. A 'Filter' button opens a panel with a low-pass/high-pass toggle, a resonance knob, and a 16-step lane I can draw on with my finger to move the cutoff across the pattern in time with the beat. Include an on/off so it's transparent when off." },
-    { id:"B4", name:"Mixer (volume + pan)", badges:"~3.5m · 🟡", st:"⬜", prompt:"Add a 'Mixer' button that opens a collapsible panel (like the Delay/Filter panels) with one row per track: a volume slider (0–100%, default 100%) and a left-center-right pan control (default center). Lay the rows out to fit a phone with no sideways scrolling. Defaults leave the mix identical." },
-    { id:"B5", name:"FX automation", badges:"~4m · 🟡⚡", st:"⬜", prompt:"Add a second draw-able 16-step automation lane (like the filter lane) that controls one effect amount — let me pick which from a short list (echo amount or master volume) — playing back in time with the beat. Include an on/off so it's inert when off." },
+
+  { id:"B", em:"🎛️", name:"Effects — echo, reverb, filter", branches:[
+    { id:"B", name:"Effects", badges:"~7m", prompt:"Add a creative Effects panel with three effects, each with its own on/off so it's transparent when off: (1) a tempo-synced Echo with a note value (1/4, 1/8, 1/16), a feedback amount, a wet level, and a per-drum send amount (default 0); (2) a Reverb send with a per-drum reverb amount (default 0) that returns in parallel, plus one size/decay control; (3) a Filter with a low-pass/high-pass toggle, a resonance knob, and a 16-step lane I draw on with my finger to sweep the cutoff across the pattern in time with the beat." },
   ]},
-  { id:"M", em:"🔊", name:"Mastering", note:"needs Step 1 · full-mix treatment, at the END of the chain (the 'glue')", branches:[
-    { id:"M1", name:"Master EQ", badges:"~3m · 🟡", st:"⬜", prompt:"Add a 3-band master EQ at the end of the chain — three knobs 'Low', 'Mid', 'High' (each -12 to +12 dB, default 0) — shaping the whole mix. At 0 the sound is unchanged." },
-    { id:"M2", name:"Glue compression", badges:"~2m · 🟢", st:"⬜", prompt:"Add a master 'bus glue' compressor on the whole mix, at the end of the chain, with one slider labeled 'Squeeze' (0–100%, default 0); higher values compress harder with a little makeup gain. At 0% the mix is unchanged." },
-    { id:"M3", name:"Limiter", badges:"~1.5m · 🟢", st:"⬜", prompt:"Add a limiter as the very last thing before the speakers so the mix never clips no matter how loud it gets. Keep it always on and transparent at normal levels, with no visible controls." },
-    { id:"M4", name:"Master reverb", badges:"~2m · 🟡", st:"⬜", prompt:"Add an optional master reverb that washes the WHOLE mix, with one 'Master reverb' amount slider (0–100%, default 0) and an on/off. This is separate from the per-track reverb sends — it treats the full mix. At 0% / off the sound is unchanged." },
-    { id:"M5", name:"Saturation / warmth", badges:"~2m · 🟢", st:"⬜", prompt:"Add a 'Warmth' knob (0–100%, default 0) that gently saturates the whole mix with a soft waveshaper for analog-style warmth. At 0% the mix is unchanged." },
-    { id:"M6", name:"Stereo width", badges:"~2.5m · 🟡", st:"⬜", prompt:"Add a 'Width' knob (0–100%, default 50 = normal) on the whole mix that narrows toward mono below 50 and widens the stereo image above 50. At 50 the mix is unchanged." },
-    { id:"M7", name:"Sidechain pump", badges:"~3m · 🟡", st:"⬜", prompt:"Add a 'Pump' slider (0–100%, default 0) that ducks the whole mix's volume briefly on every kick hit for a sidechain pumping feel, recovering before the next step. At 0% there's no ducking." },
-    { id:"M8", name:"Transient shaper (punch)", badges:"~3m · 🟡", st:"⬜", prompt:"Add a transient shaper on the whole mix labeled 'Punch', with 'Attack' (-100 to +100, default 0) to sharpen or soften the hit and 'Sustain' (-100 to +100, default 0) for the tail. At 0/0 the mix is unchanged." },
-    { id:"M9", name:"Soft clipper", badges:"~2m · 🟢", st:"⬜", prompt:"Add a 'Clip' knob (0–100%, default 0) on the master that soft-clips peaks for loudness and glue (rounding them, not harsh digital clipping), placed just before the limiter. At 0% the mix is unchanged." },
-    { id:"M10", name:"Lo-fi character", badges:"~3m · 🟡", st:"⬜", prompt:"Add a 'Lo-fi' section on the master with three amounts (each default 0): vinyl crackle, tape hiss, and a slight pitch wobble, for a dusty beat vibe. At 0 the mix is clean." },
-    { id:"M11", name:"Exciter (air)", badges:"~2m · 🟢", st:"⬜", prompt:"Add an 'Air' knob (0–100%, default 0) that adds high-frequency sparkle/excitement to the whole mix (a gentle high-shelf plus subtle harmonics). At 0% the mix is unchanged." },
-    { id:"M12", name:"Mono bass", badges:"~2.5m · 🟡", st:"⬜", prompt:"Add a 'Mono bass' control that folds low frequencies below an adjustable crossover (default 120 Hz) to mono to keep the low end solid, with an on/off. Off = unchanged." },
+
+  { id:"M", em:"🔊", name:"Mastering", branches:[
+    { id:"M", name:"Mastering", badges:"~5m", prompt:"Add a Mastering section at the very end of the audio chain that treats the whole mix (the 'glue'), with three controls that leave the mix unchanged at their defaults: (1) a 'Squeeze' compressor (0–100%, default 0) with a little makeup gain; (2) an always-on, transparent Limiter as the very last thing before the speakers so the mix never clips no matter how loud it gets; and (3) a 'Warmth' knob (0–100%, default 0) that gently saturates the whole mix for analog-style warmth." },
   ]},
-  { id:"C", em:"🥁", name:"Instruments", note:"needs Step 1 · several add per-track UI — don't stack too many", branches:[
-    { id:"C1", name:"Accent / velocity", badges:"~3m · 🟡", st:"⬜", prompt:"Make each step cycle as I tap it: off → normal hit → accent (louder, about 1.8×) → off. Show the accent state clearly (e.g. a bright ring on the cell). Presets, Clear, and Surprise Me only ever create normal hits, never accents." },
-    { id:"C2", name:"Tune", badges:"~3m · 🟡", st:"⬜", prompt:"Add a 'Tune' knob for each drum (-12 to +12 semitones, default 0) that pitches that drum up or down. At 0 each drum is unchanged. Keep the knobs compact so the rows still fit a phone." },
-    { id:"C3", name:"Attack / Decay", badges:"~3.5m · 🟡🔴", st:"⬜", prompt:"Add 'Attack' (0–100 ms, default 0) and 'Decay' (short–long, default = current sound) knobs for each drum voice to shape its envelope. Defaults leave every drum sounding exactly as it does now. Put them in a compact panel since it's a lot of controls." },
-    { id:"C4", name:"Add sampled sounds", badges:"~3m · 🟡🌐", st:"⬜", prompt:"Add a few new drum rows that play one-shot samples loaded by URL from the sounds/ folder (e.g. sounds/clap.mp3, sounds/808.mp3, sounds/rim.mp3), decoded with the Web Audio API, that I sequence like the other rows." },
-    { id:"C5", name:"Reverse a sound", badges:"~2.5m · 🟡🌐", st:"⬜", prompt:"For the sampled rows (the mic sample or the sounds/ one-shots), add a small 'Reverse' toggle per sampled sound that plays it backwards. It only affects recorded/sampled sounds, not the synthesized drums.", teach:"🎓 Reverse works on the sampled rows but NOT the synth drums — a synth hit is generated fresh each time, a sample is real audio you can flip. Sampling vs. synthesis, made tangible." },
-    { id:"C6", name:"Swing", badges:"~2m · 🟢", st:"✅", prompt:"Add a 'Swing' slider (0–60%, default 0) that delays every other 16th step for a shuffle feel. At 0% the timing is straight." },
-    { id:"C7", name:"Step probability", badges:"~3m · 🟡", st:"⬜", prompt:"Let me set a per-step chance to play (0–100%, default 100%) so hits can randomly drop out as the beat loops, adding variation. At 100% every active step always plays. Keep it phone-friendly (e.g. long-press a step to set its chance)." },
-    { id:"C8", name:"Flam / ratchet", badges:"~3m · 🟡", st:"⬜", prompt:"Let me turn a step into a fast retrigger (a flam or roll): the hit repeats 2–4 times quickly within the step, and I choose how many. Normal steps are unaffected." },
-    { id:"C9", name:"Humanize", badges:"~2m · 🟢", st:"⬜", prompt:"Add a 'Humanize' slider (0–100%, default 0) that adds small random timing and volume variation to each hit so it feels less robotic. At 0% playback is exact." },
-    { id:"C10", name:"Fun FX & vocal one-shots", badges:"~3m · 🟡🌐", st:"⬜", prompt:"Add a row of fun one-shot samples loaded by URL from the sounds/ folder — like sounds/fx/airhorn.mp3, glass.mp3, knock.mp3, bark.mp3 — that I pick from and sequence like the other rows.", teach:"🎉 Try it with C5 Reverse — a reversed airhorn is the demo everyone remembers." },
+
+  { id:"C", em:"🥁", name:"Groove — accent, swing, humanize", branches:[
+    { id:"C", name:"Groove", badges:"~5m", prompt:"Add three groove controls that leave the beat straight and even at their defaults: (1) tapping a step cycles it off → normal hit → accent (louder, about 1.8×) → off, with the accent clearly shown; (2) a 'Swing' slider (0–60%, default 0) that delays every other 16th step for a shuffle feel; and (3) a 'Humanize' slider (0–100%, default 0) that adds small random timing and volume variation so it feels less robotic." },
   ]},
-  { id:"D", em:"🔁", name:"Loops", note:"needs Step 1 · 🌐 hosted · ⚡ marquee (REX-style: sliced in prep, retriggered in time)", branches:[
-    { id:"D", name:"Loop player (trunk)", badges:"~5m · 🟡🌐⚡", st:"⬜", prompt:"Add a loop player that loads a pre-sliced loop from the loops/ folder (an MP3 plus a slices JSON) and plays its slices in time with the tempo." },
-    { id:"D1", name:"Pick from the pool", badges:"~2.5m · 🟡🌐", st:"⬜", prompt:"Let me choose which loop to load from a small menu of loops in the loops/ folder." },
-    { id:"D2", name:"Chop across the grid", badges:"~4m · 🟡⚡", st:"⬜", prompt:"Let me place the loop's slices onto the 16-step grid so I can rearrange them like drums." },
-    { id:"D3", name:"Choose slices", badges:"~2.5m · 🟡", st:"⬜", prompt:"Let me pick which of the loop's slices play and which stay silent." },
-    { id:"D4", name:"Reverse", badges:"~2m · 🟡🌐", st:"⬜", prompt:"Add a button to play the loop backwards." },
-    { id:"D5", name:"Compression", badges:"~2m · 🟡🌐", st:"⬜", prompt:"Add a compressor on the loop so it sits tight in the mix." },
-    { id:"D6", name:"Loop filter + volume", badges:"~2m · 🟡🌐", st:"⬜", prompt:"Add a volume slider and a filter for the loop." },
-    { id:"D7", name:"Per-slice pitch", badges:"~3m · 🟡🌐", st:"⬜", prompt:"Let me pitch individual slices of the loop up or down." },
+
+  { id:"E", em:"🎚️", name:"Sequencer — 32 steps, A/B, direction", branches:[
+    { id:"E", name:"Sequencer", badges:"~6m", prompt:"Upgrade the sequencer three ways: (1) expand it to 32 steps shown as two pages of 16 with a button to flip pages — when I turn on page 2, copy page 1 into it and let me edit it, and the playhead follows whichever page is playing (use pages, not a scrolling row); (2) keep two full patterns, A and B, that I can switch between while it plays; and (3) add play directions: forward, reverse, and ping-pong." },
   ]},
-  { id:"E", em:"🎚️", name:"Sequencer", note:"needs Step 1 · edits the core loop → higher regression risk; build early", branches:[
-    { id:"E1", name:"32 steps (two pages)", badges:"~4.5m · 🟡⚡", st:"⬜", prompt:"Let me expand the sequencer to 32 steps as two pages of 16, with a button to flip between page 1 and page 2. When I turn on page 2, copy page 1 into it so the beat keeps going, and let me edit the second page to add a variation. Make the playhead follow whichever page is playing. Use pages, not a scrolling row." },
-    { id:"E2", name:"Adjustable length", badges:"~3m · 🟡", st:"⬜", prompt:"Let me set how many steps the pattern loops, from 1 up to 16." },
-    { id:"E3", name:"Polymeter (per-track length)", badges:"~4m · 🟡⚡", st:"⬜", prompt:"Let me give each drum row its own number of steps so they drift in and out of sync." },
-    { id:"E4", name:"A/B patterns", badges:"~4m · 🟡", st:"⬜", prompt:"Let me keep two separate patterns, A and B, and switch between them while it plays." },
-    { id:"E5", name:"Play direction", badges:"~2.5m · 🟢", st:"⬜", prompt:"Add play modes: forward, reverse, and ping-pong." },
+
+  { id:"F", em:"🎹", name:"Melody — bass, keys, scale", branches:[
+    { id:"F", name:"Melody", badges:"~6m", prompt:"Add a melodic voice with three parts: (1) a bass row where each step can play a synth note locked to the tempo; (2) a small piano keyboard I can play by tapping; and (3) a scale selector so the bass and keyboard notes always stay in a chosen musical scale and sound right together." },
   ]},
-  { id:"F", em:"🎹", name:"Melody & Synth", note:"needs Step 1 · adds a pitched voice", branches:[
-    { id:"F1", name:"Bassline row", badges:"~4m · 🟡", st:"⬜", prompt:"Add a bass row where each step can play a synth note, locked to the tempo." },
-    { id:"F2", name:"Piano keyboard", badges:"~3.5m · 🟡", st:"⬜", prompt:"Add a small piano keyboard I can play by tapping." },
-    { id:"F3", name:"Scale lock", badges:"~2.5m · 🟢", st:"⬜", prompt:"Let me pick a musical scale so the melody notes always sound right." },
-    { id:"F4", name:"Arpeggiator", badges:"~4m · 🟡⚡", st:"⬜", prompt:"Add an arpeggiator that plays my chosen notes up and down in time." },
+
+  { id:"G", em:"🎛️", name:"Performance — volume, mute/solo, tap tempo", branches:[
+    { id:"G", name:"Performance", badges:"~4m", prompt:"Add live-performance controls: (1) a master volume knob for the whole machine; (2) mute and solo buttons on each track; and (3) a 'Tap' button I can tap a few times to set the tempo by feel." },
   ]},
-  { id:"G", em:"🎛️", name:"Performance & UI", note:"needs Step 1 · mostly 🟢 quick wins", branches:[
-    { id:"G1", name:"Master volume", badges:"~1.5m · 🟢", st:"⬜", prompt:"Add a master volume knob for the whole machine." },
-    { id:"G2", name:"Mute / Solo", badges:"~2.5m · 🟢", st:"⬜", prompt:"Let me mute or solo each track." },
-    { id:"G3", name:"Tap tempo", badges:"~2m · 🟢", st:"⬜", prompt:"Add a Tap button I can tap to set the tempo by feel." },
-    { id:"G4", name:"Metronome", badges:"~2m · 🟢", st:"⬜", prompt:"Add a metronome click I can turn on while I build a beat." },
-    { id:"G5", name:"Theme switcher", badges:"~2m · 🟢", st:"⬜", prompt:"Let me switch the color theme of the machine." },
-    { id:"G6", name:"Perform mode", badges:"~3m · 🟢", st:"⬜", prompt:"Add a big-button fullscreen mode for playing live on a phone." },
+
+  { id:"H", em:"💾", name:"Save & Share", branches:[
+    { id:"H", name:"Save & Share", badges:"~5m", prompt:"Add save and share, three ways: (1) save and share my beat as a link that reopens the exact pattern when someone else clicks it; (2) remember my beat on this device so it's still here when I come back; and (3) let me export my beat as an audio file I can download." },
   ]},
-  { id:"H", em:"💾", name:"Save, Share & Export", note:"needs Step 1", branches:[
-    { id:"H1", name:"Share link  (= Final Step)", badges:"~3m · 🟢", st:"⬜", prompt:"Let me save and share my beat as a link that reopens the exact pattern when someone else clicks it." },
-    { id:"H2", name:"Save to phone", badges:"~2m · 🟢", st:"⬜", prompt:"Remember my beat on this device so it's still here when I come back." },
-    { id:"H3", name:"Export audio file", badges:"~3.5m · 🟡", st:"⬜", prompt:"Let me export my beat as an audio file I can download.", teach:"⚠️ Downloading a file is clunky in iOS Safari — expect friction on iPhones." },
-    { id:"H4", name:"QR code", badges:"~2.5m · 🟡", st:"⬜", prompt:"Show a QR code of my beat's link so someone can scan it." },
-    { id:"H5", name:"Record performance", badges:"~3m · 🟡", st:"⬜", prompt:"Let me record my live performance and play it back." },
-  ]},
-  { id:"I", em:"📊", name:"Visualizer", note:"needs Step 1 · eye-candy, all 🟢", branches:[
-    { id:"I1", name:"Waveform scope", badges:"~2m · 🟢", st:"⬜", prompt:"Add a moving waveform display of the sound coming out." },
-    { id:"I2", name:"Reactive background", badges:"~2m · 🟢", st:"⬜", prompt:"Make the background flash and pulse in time with the hits." },
-    { id:"I3", name:"Spectrum bars", badges:"~2.5m · 🟢", st:"⬜", prompt:"Add a bar spectrum analyzer that dances to the music." },
+
+  { id:"I", em:"📊", name:"Visualizer", branches:[
+    { id:"I", name:"Visualizer", badges:"~4m", prompt:"Add three visuals that react to the sound: (1) a moving waveform display of the output; (2) a background that flashes and pulses in time with the hits; and (3) a bar spectrum analyzer that dances to the music." },
   ]},
 ];
 window.RELAY_FINAL = { prompt:"Let me save and share my beat as a link that reopens the exact pattern when someone else clicks it." };

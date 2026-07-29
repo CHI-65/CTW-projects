@@ -87,6 +87,7 @@
   .trunk-h .nm{ font-weight:800; font-size:15px; }
   .opt{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1px solid var(--line); border-radius:11px; background:var(--card); padding:11px 13px; margin:0 0 7px; cursor:pointer; font:inherit; color:inherit; }
   .opt.added{ border-color:color-mix(in srgb, var(--ok) 55%, var(--line)); }
+  .opt .oem{ font-size:18px; flex-shrink:0; }
   .opt .onm{ font-weight:700; font-size:14px; flex:1; }
   .opt .obd{ font-size:12px; color:var(--sub); white-space:nowrap; }
   .opt .chk{ font-size:15px; width:20px; text-align:center; color:var(--ok); }
@@ -232,7 +233,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v8";   // ← bump this each time we edit the app
+const APP_VERSION = "v9";   // ← bump this each time we edit the app
 const FRAME = "Add exactly this one feature to my drum machine and give me back the complete updated file, keeping everything else working exactly as it is:\n\n";
 const CODE_TAIL = "\n\nHere is the group's complete current file. Update THIS exact file and give the whole thing back as one file:\n\n";
 const MAX_CODE = 900000; // Firestore doc limit is ~1 MiB; keep a safety margin
@@ -242,7 +243,7 @@ const groupId = g => (g||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").rep
 
 // flat lookup
 const MAP = {};
-TREE.forEach(t => { if(!t.everyone) t.branches.forEach(b => MAP[t.id+"|"+b.id] = {b, t}); });
+TREE.forEach(t => { if(!t.everyone) MAP[t.id] = {b:t.branches[0], t}; });
 
 // state
 let me = { uid:null, name:null, email:null, group:null, gid:null };
@@ -548,12 +549,8 @@ function renderOptions(){
   let html="";
   for(const t of TREE){
     if(t.everyone) continue;
-    html += `<div class="trunk"><div class="trunk-h"><span class="em">${t.em}</span><span class="nm">${esc(t.name)}</span></div>`;
-    for(const b of t.branches){
-      const key=t.id+"|"+b.id;
-      html += `<button class="opt${isAdded(key)?" added":""}" data-key="${key}"><span class="onm">${esc(b.name)}</span><span class="obd">${b.badges}</span><span class="chk">${isAdded(key)?"✓":""}</span></button>`;
-    }
-    html += `</div>`;
+    const key=t.id, b=t.branches[0];
+    html += `<button class="opt${isAdded(key)?" added":""}" data-key="${key}"><span class="oem">${t.em}</span><span class="onm">${esc(t.name)}</span><span class="obd">${b.badges}</span><span class="chk">${isAdded(key)?"✓":""}</span></button>`;
   }
   const box=document.getElementById("trunks");
   box.innerHTML=html;
@@ -570,11 +567,11 @@ function openDetail(key){
     setDetail("🔙 Go back to the last working version","When an upgrade breaks the app","Dead ends happen — part of it. Paste this right after something breaks. (Or ask the moderator to restore an earlier version — every upload is saved.)", GOBACK, GOBACK, "");
     mark.style.display="none";
   } else {
-    const {b}=MAP[key];
-    setDetail(b.name, b.badges.replace(/·/g," · "), "Paste this into a brand-new Claude chat — it already includes your group's current build, so Claude upgrades the real file.", b.prompt, chatPaste(b.prompt), b.teach||"");
+    const {b,t}=MAP[key];
+    setDetail(t.name, b.badges.replace(/·/g," · "), "Paste this into a brand-new Claude chat — it already includes your group's current build, so Claude upgrades the real file. This upgrade already bakes in its refinements; nothing else is needed.", b.prompt, chatPaste(b.prompt), b.teach||"");
     mark.style.display="block";
     updateMark(key);
-    mark.onclick=()=>toggleAdded(key, b.name);
+    mark.onclick=()=>toggleAdded(key, t.name);
   }
   show("detail");
 }
