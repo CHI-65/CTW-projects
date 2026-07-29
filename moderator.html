@@ -105,14 +105,14 @@
 
     <h3>🛟 Override — inject a build (rescue)</h3>
     <div class="ovr">
-      <textarea id="ovrCode" placeholder="Paste a complete, known-good HTML build here (starts with <!DOCTYPE html>)…"></textarea>
+      <textarea id="ovrCode" placeholder="Paste a build's HTML — OR just a link to one (e.g. https://chi-65.github.io/CTW-projects/full-machine.html) — then Set."></textarea>
       <div class="ovr-row">
         <span class="muted">Set as</span>
         <select id="ovrTarget"></select>
         <button class="g-btn" id="ovrBtn">Set current build</button>
         <span class="muted" id="ovrMsg"></span>
       </div>
-      <p class="hint">Bypasses the baton and drops this build straight into the chosen group's current slot (kept in version history so you can undo it). "All groups" pushes the same build to every group at once — your break-glass fallback.</p>
+      <p class="hint">Paste HTML <b>or a link</b> (a link is easiest on a phone). Bypasses the baton and drops the build straight into the chosen group's slot (kept in history, so it's undoable). "All groups" pushes it to every group at once — your break-glass fallback. Golden build: <b>full-machine.html</b>.</p>
     </div>
 
     <h3>Groups &amp; current builds</h3>
@@ -145,7 +145,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v11";   // ← bump this each time we edit the app
+const APP_VERSION = "v12";   // ← bump this each time we edit the app
 const gate=document.getElementById("gate"), dash=document.getElementById("dash");
 const gateErr=document.getElementById("gateErr"), signoutBtn=document.getElementById("signout");
 document.getElementById("ver").textContent = APP_VERSION;
@@ -200,12 +200,19 @@ async function injectBuild(groupName, code){
   await setDoc(doc(db,"groups",gid), { buildCode:code, buildCount:newVer, currentVersion:newVer, group:groupName, updatedAt:serverTimestamp(), updatedBy:"↪ moderator override", updatedByUid:"", batonUid:"", batonName:"" }, {merge:true});
 }
 document.getElementById("ovrBtn").addEventListener("click", async ()=>{
-  const code=document.getElementById("ovrCode").value.trim();
+  let code=document.getElementById("ovrCode").value.trim();
   const target=document.getElementById("ovrTarget").value;
   const msg=document.getElementById("ovrMsg"), btn=document.getElementById("ovrBtn");
-  if(!code){ msg.textContent="Paste a build first."; return; }
-  if(!/<\s*(!doctype|html|head|body|div|button|script|style|svg|canvas|main|section|h1)/i.test(code)){ msg.textContent="⚠️ That doesn't look like HTML code."; return; }
-  btn.disabled=true; msg.textContent="working…";
+  if(!code){ msg.textContent="Paste a build — or a link to one — first."; return; }
+  btn.disabled=true;
+  // if it's a link, fetch the build from it
+  if(/^https?:\/\/\S+$/i.test(code)){
+    msg.textContent="fetching…";
+    try{ const r=await fetch(code+(code.indexOf('?')>=0?'&':'?')+'t='+Date.now()); if(!r.ok) throw new Error('HTTP '+r.status); code=(await r.text()).trim(); }
+    catch(e){ msg.textContent="Couldn't fetch that link ("+e.message+")"; btn.disabled=false; return; }
+  }
+  if(!/<\s*(!doctype|html|head|body|div|button|script|style|svg|canvas|main|section|h1)/i.test(code)){ msg.textContent="⚠️ That doesn't look like a build (HTML)."; btn.disabled=false; return; }
+  msg.textContent="working…";
   try{
     if(target==="__all__"){
       const n = Math.max(1, Math.min(40, parseInt(document.getElementById("grpCount").value,10)||6));

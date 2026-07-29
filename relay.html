@@ -233,7 +233,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v11";   // ← bump this each time we edit the app
+const APP_VERSION = "v12";   // ← bump this each time we edit the app
 const FRAME = "Add exactly this one feature to my drum machine and give me back the complete updated file, keeping everything else working exactly as it is:\n\n";
 const CODE_TAIL = "\n\nHere is the group's complete current file. Update THIS exact file and give the whole thing back as one file:\n\n";
 const MAX_CODE = 900000; // Firestore doc limit is ~1 MiB; keep a safety margin
