@@ -8,305 +8,284 @@
   :root{ --bg:#12100c; --panel:#1c1810; --panel2:#242015; --ink:#f4ede2; --sub:#b6a891; --line:#3a2f22; --acc:#ff8a3d; --acc2:#c084fc; --ok:#b6e528; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
   body{ margin:0; background:var(--bg); color:var(--ink); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.4; }
-  .wrap{ max-width:760px; margin:0 auto; padding:14px 12px 40px; }
+  .wrap{ max-width:800px; margin:0 auto; padding:14px 12px 48px; }
   h1{ font-size:19px; font-weight:800; margin:0 0 2px; letter-spacing:-.01em; }
   h1 b{ color:var(--acc); }
-  .tag{ font-size:12px; color:var(--sub); margin:0 0 12px; }
+  .tag{ font-size:11.5px; color:var(--sub); margin:0 0 12px; }
   .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; margin:0 0 12px; }
+  .ph{ font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--sub); margin:0 0 9px; }
   .transport{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .play{ font:inherit; font-size:16px; font-weight:800; color:#2a1500; background:var(--acc); border:0; border-radius:11px; padding:12px 22px; cursor:pointer; min-width:104px; }
   .play.on{ background:var(--ok); color:#12240a; }
   .ctl{ display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--sub); }
-  .ctl input[type=range]{ width:120px; accent-color:var(--acc); }
+  .ctl input[type=range]{ width:118px; accent-color:var(--acc); }
   .ctl .v{ color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums; }
   .btn{ font:inherit; font-size:12.5px; font-weight:700; color:var(--ink); background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:8px 12px; cursor:pointer; }
+  .btn.on{ color:#2a1500; background:var(--acc); border-color:var(--acc); }
+  .btn.acc2.on{ background:var(--acc2); border-color:var(--acc2); color:#1a0a2e; }
   .btn:active{ transform:translateY(1px); }
-  canvas#viz{ width:100%; height:56px; display:block; background:var(--panel2); border-radius:10px; margin-top:10px; }
-  .grid{ display:flex; flex-direction:column; gap:7px; }
-  .row{ display:grid; grid-template-columns:66px 1fr; gap:8px; align-items:center; }
-  .name{ display:flex; align-items:center; gap:6px; }
-  .name .lbl{ font-size:12.5px; font-weight:800; }
-  .name .m{ font-size:9px; font-weight:800; color:var(--sub); border:1px solid var(--line); border-radius:5px; padding:2px 4px; cursor:pointer; }
-  .name .m.on{ color:#2a1500; background:var(--acc); border-color:var(--acc); }
+  canvas#viz{ width:100%; height:52px; display:block; background:var(--panel2); border-radius:10px; margin-top:10px; }
+  .grid{ display:flex; flex-direction:column; gap:6px; }
+  .row{ display:grid; grid-template-columns:96px 1fr; gap:8px; align-items:center; }
+  .name{ display:flex; align-items:center; gap:5px; }
+  .name .lbl{ font-size:12px; font-weight:800; min-width:44px; }
+  .tg{ font-size:9px; font-weight:800; color:var(--sub); border:1px solid var(--line); border-radius:5px; padding:2px 4px; cursor:pointer; }
+  .tg.m.on{ color:#2a1500; background:var(--acc); border-color:var(--acc); }
+  .tg.s.on{ color:#12240a; background:var(--ok); border-color:var(--ok); }
   .steps{ display:grid; grid-template-columns:repeat(16,1fr); gap:3px; }
-  .cell{ aspect-ratio:1/1.15; border-radius:5px; background:var(--panel2); border:1px solid var(--line); cursor:pointer; }
-  .cell.b{ background:#2b2517; }            /* beat marker (every 4) */
+  .cell{ aspect-ratio:1/1.1; border-radius:5px; background:var(--panel2); border:1px solid var(--line); cursor:pointer; }
+  .cell.b{ background:#2b2517; }
   .cell.on{ background:var(--acc); border-color:var(--acc); }
+  .cell.acc{ background:var(--ok); border-color:var(--ok); box-shadow:inset 0 0 0 2px #fff6; }
   .cell.play{ box-shadow:0 0 0 2px var(--acc2); }
-  .mix{ display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px; }
+  .mix{ display:grid; grid-template-columns:repeat(auto-fit,minmax(88px,1fr)); gap:8px; }
   .mchan{ background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:8px; text-align:center; }
-  .mchan .mn{ font-size:11.5px; font-weight:800; margin-bottom:5px; }
+  .mchan .mn{ font-size:11px; font-weight:800; margin-bottom:5px; }
   .mchan input[type=range]{ width:100%; accent-color:var(--acc2); }
-  .fx{ display:flex; gap:16px; flex-wrap:wrap; }
+  .fx{ display:flex; gap:14px; flex-wrap:wrap; }
+  .keys{ display:flex; gap:2px; margin-top:8px; }
+  .key{ flex:1; height:44px; border-radius:0 0 6px 6px; background:linear-gradient(#f4ede2,#d9cdb8); border:1px solid #0007; cursor:pointer; }
+  .key.blk{ background:linear-gradient(#333,#111); flex:.7; margin:0 -6px; z-index:2; }
+  .key:active{ filter:brightness(.85); }
+  .rowflex{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .foot{ text-align:center; color:var(--sub); font-size:11px; margin-top:6px; }
+  select{ font:inherit; font-size:13px; color:var(--ink); background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:7px 9px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>CTW <b>Beat Machine</b></h1>
-  <div class="tag">Full build · 6 voices · swing · mixer · filter · echo · visualizer</div>
+  <div class="tag">Full build · 7 voices · A/B · accent · swing · humanize · mixer · filter · echo · reverb · mastering · melody · visualizer · save</div>
 
   <div class="panel">
     <div class="transport">
       <button class="play" id="play">▶ Play</button>
-      <label class="ctl">Tempo <span class="v"><span id="bpmv">96</span> BPM</span><input type="range" id="bpm" min="60" max="180" value="96"></label>
+      <label class="ctl">Tempo <span class="v"><span id="bpmv">96</span></span><input type="range" id="bpm" min="60" max="180" value="96"></label>
+      <button class="btn" id="tap">Tap</button>
       <label class="ctl">Swing <span class="v"><span id="swv">0</span>%</span><input type="range" id="sw" min="0" max="60" value="0"></label>
+      <label class="ctl">Humanize <span class="v"><span id="hmv">0</span>%</span><input type="range" id="hm" min="0" max="100" value="0"></label>
       <label class="ctl">Master <span class="v"><span id="mv">80</span></span><input type="range" id="master" min="0" max="100" value="80"></label>
     </div>
-    <canvas id="viz" width="720" height="56"></canvas>
+    <div class="rowflex" style="margin-top:10px">
+      <span class="ctl" style="flex-direction:row;align-items:center;gap:6px">Pattern
+        <button class="btn acc2 on" id="pA">A</button><button class="btn acc2" id="pB">B</button>
+        <button class="btn" id="copyab" title="copy A to B">A→B</button>
+      </span>
+      <span class="ctl" style="flex-direction:row;align-items:center;gap:6px">Direction
+        <select id="dir"><option value="fwd">Forward</option><option value="rev">Reverse</option><option value="pp">Ping-pong</option></select>
+      </span>
+    </div>
+    <canvas id="viz" width="760" height="52"></canvas>
   </div>
 
   <div class="panel">
     <div class="grid" id="grid"></div>
+    <div class="ph" style="margin:12px 0 6px">Melody — bass keyboard</div>
+    <div class="rowflex">
+      <label class="ctl" style="flex-direction:row;align-items:center;gap:6px">Key <select id="root"></select></label>
+      <label class="ctl" style="flex-direction:row;align-items:center;gap:6px">Scale <select id="scale"><option value="major">Major</option><option value="minor" selected>Minor</option><option value="penta">Pentatonic</option><option value="chrom">Chromatic</option></select></label>
+    </div>
+    <div class="keys" id="keys"></div>
   </div>
 
   <div class="panel">
-    <div class="fx" style="margin-bottom:12px">
+    <div class="ph">Filter · Echo · Reverb</div>
+    <div class="fx">
       <label class="ctl">Filter cutoff <span class="v"><span id="cutv">full</span></span><input type="range" id="cut" min="200" max="16000" value="16000"></label>
       <label class="ctl">Echo mix <span class="v"><span id="dlyv">0</span>%</span><input type="range" id="dly" min="0" max="100" value="0"></label>
+      <label class="ctl">Reverb <span class="v"><span id="rvv">0</span>%</span><input type="range" id="rv" min="0" max="100" value="0"></label>
     </div>
+    <div class="ph" style="margin-top:14px">Mastering (the glue)</div>
+    <div class="fx">
+      <label class="ctl">Glue <span class="v"><span id="glv">0</span>%</span><input type="range" id="gl" min="0" max="100" value="0"></label>
+      <label class="ctl">Warmth <span class="v"><span id="wmv">0</span>%</span><input type="range" id="wm" min="0" max="100" value="0"></label>
+      <span class="ctl" style="justify-content:flex-end;font-size:10.5px">Limiter: always on ✓</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">Mixer — volume · mute (M) · solo (S)</div>
     <div class="mix" id="mix"></div>
   </div>
 
   <div class="panel">
-    <div style="display:flex; gap:8px; flex-wrap:wrap">
+    <div class="rowflex">
       <button class="btn" data-preset="four">Four-on-floor</button>
       <button class="btn" data-preset="boom">Boom-bap</button>
       <button class="btn" data-preset="house">House</button>
       <button class="btn" id="rand">🎲 Surprise me</button>
       <button class="btn" id="clear">Clear</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="save">💾 Save</button>
+      <button class="btn" id="share">🔗 Share link</button>
     </div>
+    <div class="foot" id="msg">Compton Tech Week · The Beat Relay</div>
   </div>
-  <div class="foot">Compton Tech Week · The Beat Relay</div>
 </div>
 
 <script>
 (function(){
   "use strict";
-  var STEPS = 16;
-  var TRACKS = [
-    { id:"kick", name:"Kick",  vol:0.9 },
-    { id:"snare",name:"Snare", vol:0.8 },
-    { id:"hat",  name:"Hi-hat",vol:0.5 },
-    { id:"open", name:"Open",  vol:0.45 },
-    { id:"clap", name:"Clap",  vol:0.7 },
-    { id:"tom",  name:"Tom",   vol:0.6 },
+  var STEPS=16;
+  var TRACKS=[
+    {id:"kick",name:"Kick",vol:.9},{id:"snare",name:"Snare",vol:.8},{id:"hat",name:"Hi-hat",vol:.5},
+    {id:"open",name:"Open",vol:.45},{id:"clap",name:"Clap",vol:.7},{id:"tom",name:"Tom",vol:.6},{id:"bass",name:"Bass",vol:.8}
   ];
-  var pattern = TRACKS.map(function(){ return new Array(STEPS).fill(false); });
-  var mute = TRACKS.map(function(){ return false; });
-  var trackVol = TRACKS.map(function(t){ return t.vol; });
+  var NT=TRACKS.length;
+  function blank(){ return TRACKS.map(function(){ return new Array(STEPS).fill(0); }); } // 0 off,1 on,2 accent
+  var pat={ A:blank(), B:blank() }, page="A";
+  function P(){ return pat[page]; }
+  var mute=TRACKS.map(function(){return false;}), solo=TRACKS.map(function(){return false;}), tvol=TRACKS.map(function(t){return t.vol;});
+  var bassSemi=0; // set by keyboard, used by bass steps
 
-  var ac=null, master=null, filter=null, delay=null, delayGain=null, fbGain=null, analyser=null;
-  var playing=false, current=0, nextTime=0, lookahead=0.025, ahead=0.12, timer=null;
-  var bpm=96, swing=0;
+  var ac,busIn,filter,glue,warmth,limiter,master,analyser,echoSend,delay,fb,rvSend,conv;
+  function build(){
+    ac=new (window.AudioContext||window.webkitAudioContext)();
+    busIn=ac.createGain();
+    filter=ac.createBiquadFilter(); filter.type="lowpass"; filter.frequency.value=16000; filter.Q.value=.7;
+    glue=ac.createDynamicsCompressor(); setGlue(0);
+    warmth=ac.createWaveShaper(); setWarmth(0);
+    limiter=ac.createDynamicsCompressor(); limiter.threshold.value=-1.5; limiter.knee.value=0; limiter.ratio.value=20; limiter.attack.value=.003; limiter.release.value=.1;
+    master=ac.createGain(); master.gain.value=.8;
+    analyser=ac.createAnalyser(); analyser.fftSize=128;
+    busIn.connect(filter); filter.connect(glue); glue.connect(warmth); warmth.connect(limiter); limiter.connect(master); master.connect(analyser); analyser.connect(ac.destination);
+    // echo send
+    echoSend=ac.createGain(); echoSend.gain.value=0; delay=ac.createDelay(1); delay.delayTime.value=.3; fb=ac.createGain(); fb.gain.value=.34;
+    busIn.connect(echoSend); echoSend.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(filter);
+    // reverb send
+    rvSend=ac.createGain(); rvSend.gain.value=0; conv=ac.createConvolver(); conv.buffer=impulse(1.8,2.2);
+    busIn.connect(rvSend); rvSend.connect(conv); conv.connect(filter);
+  }
+  function impulse(dur,decay){
+    var n=Math.floor(ac.sampleRate*dur), b=ac.createBuffer(2,n,ac.sampleRate);
+    for(var c=0;c<2;c++){ var d=b.getChannelData(c); for(var i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,decay); }
+    return b;
+  }
+  function setGlue(v){ if(!glue)return; var t=v/100; glue.threshold.value=-6-t*24; glue.knee.value=24; glue.ratio.value=1+t*8; glue.attack.value=.01; glue.release.value=.18; }
+  function setWarmth(v){ if(!warmth)return; var k=v/100*.85, n=1024, cur=new Float32Array(n); for(var i=0;i<n;i++){ var x=i/(n-1)*2-1; cur[i]=k>0?((1+k)*x/(1+k*Math.abs(x))):x; } warmth.curve=cur; }
 
-  function buildAudio(){
-    ac = new (window.AudioContext||window.webkitAudioContext)();
-    master = ac.createGain(); master.gain.value = 0.8;
-    filter = ac.createBiquadFilter(); filter.type="lowpass"; filter.frequency.value=16000; filter.Q.value=0.7;
-    analyser = ac.createAnalyser(); analyser.fftSize=128;
-    // echo
-    delay = ac.createDelay(1.0); delay.delayTime.value=0.3;
-    fbGain = ac.createGain(); fbGain.gain.value=0.34;
-    delayGain = ac.createGain(); delayGain.gain.value=0.0;
-    // routing: [voices] -> filter -> master -> analyser -> dest ; filter -> delay -> fb loop -> master
-    filter.connect(master);
-    master.connect(analyser); analyser.connect(ac.destination);
-    filter.connect(delayGain); delayGain.connect(delay); delay.connect(fbGain); fbGain.connect(delay); delay.connect(master);
+  // silent-switch unlock (iOS)
+  var unlocked=false;
+  function unlock(){ if(!ac) build(); if(ac.state==="suspended") ac.resume(); if(unlocked)return; unlocked=true;
+    try{ var a=document.createElement("audio"); a.setAttribute("playsinline",""); a.loop=true; a.src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTEFNRTMuOTkuNVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"; var p=a.play(); if(p&&p.catch)p.catch(function(){}); }catch(e){} }
+  window.addEventListener("pointerdown",unlock);
+
+  function noise(dur){ var n=Math.floor(ac.sampleRate*dur),b=ac.createBuffer(1,n,ac.sampleRate),d=b.getChannelData(0); for(var i=0;i<n;i++)d[i]=Math.random()*2-1; return b; }
+  function trig(id,t,vel,accent){
+    var out=ac.createGain(); out.gain.value=vel*(accent?1.7:1); out.connect(busIn);
+    var bright=accent?1.4:1;
+    if(id==="kick"){ var o=ac.createOscillator(),g=ac.createGain();o.type="sine";o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(48,t+.12);g.gain.setValueAtTime(1,t);g.gain.exponentialRampToValueAtTime(.001,t+.34);o.connect(g);g.connect(out);o.start(t);o.stop(t+.36); }
+    else if(id==="tom"){ var o2=ac.createOscillator(),g2=ac.createGain();o2.type="sine";o2.frequency.setValueAtTime(220,t);o2.frequency.exponentialRampToValueAtTime(90,t+.2);g2.gain.setValueAtTime(1,t);g2.gain.exponentialRampToValueAtTime(.001,t+.3);o2.connect(g2);g2.connect(out);o2.start(t);o2.stop(t+.32); }
+    else if(id==="snare"){ var ns=ac.createBufferSource();ns.buffer=noise(.2);var nf=ac.createBiquadFilter();nf.type="highpass";nf.frequency.value=1400/bright;var ng=ac.createGain();ng.gain.setValueAtTime(.9,t);ng.gain.exponentialRampToValueAtTime(.001,t+.2);ns.connect(nf);nf.connect(ng);ng.connect(out);ns.start(t);ns.stop(t+.22);var b=ac.createOscillator(),bg=ac.createGain();b.type="triangle";b.frequency.setValueAtTime(190,t);bg.gain.setValueAtTime(.5,t);bg.gain.exponentialRampToValueAtTime(.001,t+.12);b.connect(bg);bg.connect(out);b.start(t);b.stop(t+.13); }
+    else if(id==="clap"){ for(var k=0;k<3;k++){ var cs=ac.createBufferSource();cs.buffer=noise(.1);var cf=ac.createBiquadFilter();cf.type="bandpass";cf.frequency.value=1200;cf.Q.value=1.4;var cg=ac.createGain();var st=t+k*.02;cg.gain.setValueAtTime(.001,st);cg.gain.linearRampToValueAtTime(.8,st+.002);cg.gain.exponentialRampToValueAtTime(.001,st+.12);cs.connect(cf);cf.connect(cg);cg.connect(out);cs.start(st);cs.stop(st+.14);} }
+    else if(id==="bass"){ var bo=ac.createOscillator(),bg2=ac.createGain(),bf=ac.createBiquadFilter();bo.type="sawtooth";bf.type="lowpass";bf.frequency.value=600*bright;var f=55*Math.pow(2,bassSemi/12);bo.frequency.setValueAtTime(f,t);bg2.gain.setValueAtTime(.9,t);bg2.gain.exponentialRampToValueAtTime(.001,t+.28);bo.connect(bf);bf.connect(bg2);bg2.connect(out);bo.start(t);bo.stop(t+.3); }
+    else { var open=id==="open";var hs=ac.createBufferSource();hs.buffer=noise(open?.4:.06);var hf=ac.createBiquadFilter();hf.type="highpass";hf.frequency.value=7000;var hg=ac.createGain();var dur=open?.34:.05;hg.gain.setValueAtTime(.7,t);hg.gain.exponentialRampToValueAtTime(.001,t+dur);hs.connect(hf);hf.connect(hg);hg.connect(out);hs.start(t);hs.stop(t+dur+.02); }
   }
 
-  // ---- iOS: play even when the ring/silent switch is on (unlock the media channel) ----
-  var unlocked=false, silentEl=null;
-  function unlockAudio(){
-    if(!ac) buildAudio();
-    if(ac.state==="suspended") ac.resume();
-    if(unlocked) return; unlocked=true;
-    try{
-      silentEl = document.createElement("audio");
-      silentEl.setAttribute("playsinline","");
-      silentEl.loop = true;
-      silentEl.src = "data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTEFNRTMuOTkuNVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
-      var p = silentEl.play(); if(p&&p.catch) p.catch(function(){});
-    }catch(e){}
+  // scheduler
+  var playing=false,idx=0,dirState=1,nextT=0,timer=null,bpm=96,swing=0,human=0,dir="fwd";
+  function sd(){ return 60/bpm/4; }
+  function anySolo(){ for(var i=0;i<NT;i++) if(solo[i]) return true; return false; }
+  function playStep(step,time){
+    var sol=anySolo();
+    for(var i=0;i<NT;i++){ var v=P()[i][step]; if(!v) continue; if(mute[i]) continue; if(sol&&!solo[i]) continue;
+      var t=time+(human/100)*(Math.random()-.5)*.03; var vv=tvol[i]*(1-(human/100)*Math.random()*.3);
+      trig(TRACKS[i].id,Math.max(time,t),vv,v===2); }
+    var when=(time-ac.currentTime)*1000; setTimeout(function(){ head(step); },Math.max(0,when));
   }
-  window.addEventListener("pointerdown", unlockAudio, {once:false});
-
-  // ---- drum synthesis ----
-  function noiseBuf(dur){
-    var n=Math.floor(ac.sampleRate*dur), b=ac.createBuffer(1,n,ac.sampleRate), d=b.getChannelData(0);
-    for(var i=0;i<n;i++) d[i]=Math.random()*2-1; return b;
-  }
-  function trigger(id, t, vel){
-    var out = ac.createGain(); out.gain.value = vel; out.connect(filter);
-    if(id==="kick"){
-      var o=ac.createOscillator(), g=ac.createGain(); o.type="sine";
-      o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(48,t+0.12);
-      g.gain.setValueAtTime(1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.34);
-      o.connect(g); g.connect(out); o.start(t); o.stop(t+0.36);
-    } else if(id==="tom"){
-      var o2=ac.createOscillator(), g2=ac.createGain(); o2.type="sine";
-      o2.frequency.setValueAtTime(220,t); o2.frequency.exponentialRampToValueAtTime(90,t+0.2);
-      g2.gain.setValueAtTime(1,t); g2.gain.exponentialRampToValueAtTime(0.001,t+0.3);
-      o2.connect(g2); g2.connect(out); o2.start(t); o2.stop(t+0.32);
-    } else if(id==="snare"){
-      var ns=ac.createBufferSource(); ns.buffer=noiseBuf(0.2);
-      var nf=ac.createBiquadFilter(); nf.type="highpass"; nf.frequency.value=1400;
-      var ng=ac.createGain(); ng.gain.setValueAtTime(0.9,t); ng.gain.exponentialRampToValueAtTime(0.001,t+0.2);
-      ns.connect(nf); nf.connect(ng); ng.connect(out); ns.start(t); ns.stop(t+0.22);
-      var b=ac.createOscillator(), bg=ac.createGain(); b.type="triangle"; b.frequency.setValueAtTime(190,t);
-      bg.gain.setValueAtTime(0.5,t); bg.gain.exponentialRampToValueAtTime(0.001,t+0.12);
-      b.connect(bg); bg.connect(out); b.start(t); b.stop(t+0.13);
-    } else if(id==="clap"){
-      for(var k=0;k<3;k++){
-        var cs=ac.createBufferSource(); cs.buffer=noiseBuf(0.1);
-        var cf=ac.createBiquadFilter(); cf.type="bandpass"; cf.frequency.value=1200; cf.Q.value=1.4;
-        var cg=ac.createGain(); var st=t+k*0.02;
-        cg.gain.setValueAtTime(0.001,st); cg.gain.linearRampToValueAtTime(0.8,st+0.002); cg.gain.exponentialRampToValueAtTime(0.001,st+0.12);
-        cs.connect(cf); cf.connect(cg); cg.connect(out); cs.start(st); cs.stop(st+0.14);
-      }
-    } else { // hats
-      var open = id==="open";
-      var hs=ac.createBufferSource(); hs.buffer=noiseBuf(open?0.4:0.06);
-      var hf=ac.createBiquadFilter(); hf.type="highpass"; hf.frequency.value=7000;
-      var hg=ac.createGain(); var dur=open?0.34:0.05;
-      hg.gain.setValueAtTime(0.7,t); hg.gain.exponentialRampToValueAtTime(0.001,t+dur);
-      hs.connect(hf); hf.connect(hg); hg.connect(out); hs.start(t); hs.stop(t+dur+0.02);
-    }
-  }
-
-  // ---- scheduler ----
-  function stepDur(){ return 60/bpm/4; }
-  function scheduleStep(step, time){
-    for(var i=0;i<TRACKS.length;i++){
-      if(pattern[i][step] && !mute[i]) trigger(TRACKS[i].id, time, trackVol[i]);
-    }
-    // playhead paint
-    var when = (time - ac.currentTime)*1000;
-    setTimeout(function(){ paintHead(step); }, Math.max(0,when));
-  }
-  function nextStep(){
-    var d = stepDur();
-    var sw = (swing/100)*0.6*d;
-    nextTime += d + ((current%2===1)? sw : 0) - ((current%2===0)? 0 : 0);
-    current = (current+1)%STEPS;
+  function advance(){
+    if(dir==="rev"){ idx--; if(idx<0) idx=STEPS-1; }
+    else if(dir==="pp"){ idx+=dirState; if(idx>=STEPS){ idx=STEPS-2; dirState=-1; } else if(idx<0){ idx=1; dirState=1; } }
+    else { idx++; if(idx>=STEPS) idx=0; }
   }
   function loop(){
-    while(nextTime < ac.currentTime + ahead){
-      scheduleStep(current, nextTime + ((current%2===1)?(swing/100)*0.6*stepDur():0));
-      nextTime += stepDur();
-      current = (current+1)%STEPS;
+    while(nextT<ac.currentTime+.12){
+      var sw=(idx%2===1)?(swing/100)*.6*sd():0;
+      playStep(idx,nextT+sw); nextT+=sd(); advance();
     }
-    timer = setTimeout(loop, lookahead*1000);
+    timer=setTimeout(loop,25);
   }
-  function start(){
-    unlockAudio();
-    if(ac.state==="suspended") ac.resume();
-    playing=true; current=0; nextTime=ac.currentTime+0.06;
-    loop();
-    var b=document.getElementById("play"); b.textContent="■ Stop"; b.classList.add("on");
-  }
-  function stop(){
-    playing=false; if(timer) clearTimeout(timer); timer=null;
-    var b=document.getElementById("play"); b.textContent="▶ Play"; b.classList.remove("on");
-    paintHead(-1);
-  }
+  function start(){ unlock(); if(ac.state==="suspended")ac.resume(); playing=true; idx=(dir==="rev")?STEPS-1:0; dirState=1; nextT=ac.currentTime+.06; loop(); var b=document.getElementById("play"); b.textContent="■ Stop"; b.classList.add("on"); }
+  function stop(){ playing=false; if(timer)clearTimeout(timer); timer=null; var b=document.getElementById("play"); b.textContent="▶ Play"; b.classList.remove("on"); head(-1); }
 
-  // ---- UI ----
-  var cellEls=[];
+  // grid UI
+  var cells=[];
   function buildGrid(){
-    var g=document.getElementById("grid"); g.innerHTML="";
-    for(var i=0;i<TRACKS.length;i++){
-      (function(i){
-        var row=document.createElement("div"); row.className="row";
-        var nm=document.createElement("div"); nm.className="name";
-        var lbl=document.createElement("span"); lbl.className="lbl"; lbl.textContent=TRACKS[i].name;
-        var m=document.createElement("span"); m.className="m"; m.textContent="M";
-        m.addEventListener("click",function(){ mute[i]=!mute[i]; m.classList.toggle("on",mute[i]); });
-        nm.appendChild(lbl); nm.appendChild(m);
-        var steps=document.createElement("div"); steps.className="steps";
-        cellEls[i]=[];
-        for(var s=0;s<STEPS;s++){
-          (function(s){
-            var c=document.createElement("div"); c.className="cell"+((s%4===0)?" b":"");
-            c.addEventListener("click",function(){ pattern[i][s]=!pattern[i][s]; c.classList.toggle("on",pattern[i][s]); if(pattern[i][s]&&ac) trigger(TRACKS[i].id, ac.currentTime, trackVol[i]); });
-            steps.appendChild(c); cellEls[i][s]=c;
-          })(s);
-        }
-        row.appendChild(nm); row.appendChild(steps); g.appendChild(row);
-      })(i);
-    }
-  }
-  function repaint(){
-    for(var i=0;i<TRACKS.length;i++) for(var s=0;s<STEPS;s++) cellEls[i][s].classList.toggle("on",pattern[i][s]);
-  }
-  var lastHead=-1;
-  function paintHead(step){
-    for(var i=0;i<TRACKS.length;i++){
-      if(lastHead>=0 && cellEls[i][lastHead]) cellEls[i][lastHead].classList.remove("play");
-      if(step>=0 && cellEls[i][step]) cellEls[i][step].classList.add("play");
-    }
-    lastHead=step;
-  }
-  function buildMixer(){
-    var m=document.getElementById("mix"); m.innerHTML="";
-    for(var i=0;i<TRACKS.length;i++){
-      (function(i){
-        var ch=document.createElement("div"); ch.className="mchan";
-        var nm=document.createElement("div"); nm.className="mn"; nm.textContent=TRACKS[i].name;
-        var r=document.createElement("input"); r.type="range"; r.min=0; r.max=100; r.value=Math.round(trackVol[i]*100);
-        r.addEventListener("input",function(){ trackVol[i]=r.value/100; });
-        ch.appendChild(nm); ch.appendChild(r); m.appendChild(ch);
-      })(i);
-    }
-  }
-
-  // presets
-  var PRESETS={
-    four:{kick:[0,4,8,12], snare:[4,12], hat:[0,2,4,6,8,10,12,14], clap:[4,12]},
-    boom:{kick:[0,6,10], snare:[4,12], hat:[0,2,4,6,8,10,12,14], open:[14]},
-    house:{kick:[0,4,8,12], clap:[4,12], hat:[2,6,10,14], open:[2,10], snare:[]}
-  };
-  function applyPreset(name){
-    pattern=TRACKS.map(function(){ return new Array(STEPS).fill(false); });
-    var p=PRESETS[name]; if(p){ for(var t=0;t<TRACKS.length;t++){ var arr=p[TRACKS[t].id]; if(arr) arr.forEach(function(s){ pattern[t][s]=true; }); } }
+    var g=document.getElementById("grid"); g.innerHTML=""; cells=[];
+    for(var i=0;i<NT;i++){ (function(i){
+      var row=document.createElement("div"); row.className="row";
+      var nm=document.createElement("div"); nm.className="name";
+      var lbl=document.createElement("span"); lbl.className="lbl"; lbl.textContent=TRACKS[i].name;
+      var m=document.createElement("span"); m.className="tg m"; m.textContent="M"; m.onclick=function(){ mute[i]=!mute[i]; m.classList.toggle("on",mute[i]); };
+      var s=document.createElement("span"); s.className="tg s"; s.textContent="S"; s.onclick=function(){ solo[i]=!solo[i]; s.classList.toggle("on",solo[i]); };
+      nm.appendChild(lbl); nm.appendChild(m); nm.appendChild(s);
+      var steps=document.createElement("div"); steps.className="steps"; cells[i]=[];
+      for(var st=0;st<STEPS;st++){ (function(st){
+        var c=document.createElement("div"); c.className="cell"+((st%4===0)?" b":"");
+        c.onclick=function(){ var v=(P()[i][st]+1)%3; P()[i][st]=v; paintCell(i,st); if(v&&ac) trig(TRACKS[i].id,ac.currentTime,tvol[i],v===2); };
+        steps.appendChild(c); cells[i][st]=c;
+      })(st); }
+      row.appendChild(nm); row.appendChild(steps); g.appendChild(row);
+    })(i); }
     repaint();
   }
-  function randomize(){
-    var dens=[0.35,0.25,0.5,0.12,0.2,0.12];
-    for(var t=0;t<TRACKS.length;t++) for(var s=0;s<STEPS;s++) pattern[t][s]=Math.random()<dens[t];
-    repaint();
-  }
+  function paintCell(i,st){ var v=P()[i][st],c=cells[i][st]; c.classList.toggle("on",v===1); c.classList.toggle("acc",v===2); }
+  function repaint(){ for(var i=0;i<NT;i++)for(var st=0;st<STEPS;st++)paintCell(i,st); }
+  var lastH=-1;
+  function head(step){ for(var i=0;i<NT;i++){ if(lastH>=0&&cells[i][lastH])cells[i][lastH].classList.remove("play"); if(step>=0&&cells[i][step])cells[i][step].classList.add("play"); } lastH=step; }
 
-  // visualizer
-  function drawViz(){
-    requestAnimationFrame(drawViz);
-    var cv=document.getElementById("viz"), cx=cv.getContext("2d");
-    cx.clearRect(0,0,cv.width,cv.height);
-    if(!analyser){ return; }
-    var n=analyser.frequencyBinCount, data=new Uint8Array(n); analyser.getByteFrequencyData(data);
-    var bw=cv.width/n;
-    for(var i=0;i<n;i++){
-      var h=(data[i]/255)*cv.height;
-      var hue = 24 + (i/n)*60;
-      cx.fillStyle="hsl("+hue+",90%,"+(45+ (data[i]/255)*20)+"%)";
-      cx.fillRect(i*bw, cv.height-h, bw-1, h);
-    }
-  }
+  function buildMix(){ var m=document.getElementById("mix"); m.innerHTML=""; for(var i=0;i<NT;i++){ (function(i){
+    var ch=document.createElement("div"); ch.className="mchan"; var nm=document.createElement("div"); nm.className="mn"; nm.textContent=TRACKS[i].name;
+    var r=document.createElement("input"); r.type="range"; r.min=0; r.max=100; r.value=Math.round(tvol[i]*100); r.oninput=function(){ tvol[i]=r.value/100; };
+    ch.appendChild(nm); ch.appendChild(r); m.appendChild(ch);
+  })(i); } }
 
-  // wire controls
+  // melody keyboard
+  var NOTE_NAMES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  var SCALES={major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],penta:[0,3,5,7,10],chrom:[0,1,2,3,4,5,6,7,8,9,10,11]};
+  function rootSemi(){ return parseInt(document.getElementById("root").value,10)||0; }
+  function scaleNotes(){ var sc=SCALES[document.getElementById("scale").value]||SCALES.minor, r=rootSemi(), out=[]; for(var o=0;o<2;o++)for(var k=0;k<sc.length;k++)out.push(r+sc[k]+o*12); out.push(r+24); return out; }
+  function buildKeys(){ var k=document.getElementById("keys"); k.innerHTML=""; var notes=scaleNotes(); notes.forEach(function(sm){ var b=document.createElement("div"); b.className="key"; b.onclick=function(){ unlock(); bassSemi=sm-12; trig("bass",ac.currentTime,.8,false); }; k.appendChild(b); }); }
+  function buildRoot(){ var s=document.getElementById("root"); s.innerHTML=NOTE_NAMES.map(function(n,i){return '<option value="'+i+'"'+(i===0?" selected":"")+'>'+n+'</option>';}).join(""); }
+
+  var PRESETS={ four:{kick:[0,4,8,12],snare:[4,12],hat:[0,2,4,6,8,10,12,14],clap:[4,12]}, boom:{kick:[0,6,10],snare:[4,12],hat:[0,2,4,6,8,10,12,14],open:[14]}, house:{kick:[0,4,8,12],clap:[4,12],hat:[2,6,10,14],open:[2,10]} };
+  function applyPreset(name){ pat[page]=blank(); var p=PRESETS[name]; if(p){ for(var t=0;t<NT;t++){ var a=p[TRACKS[t].id]; if(a)a.forEach(function(s){ pat[page][t][s]=1; }); } } repaint(); }
+  function randomize(){ var dens=[.35,.25,.5,.12,.2,.12,.3]; for(var t=0;t<NT;t++)for(var s=0;s<STEPS;s++){ var r=Math.random(); pat[page][t][s]= r<dens[t]*.25?2 : r<dens[t]?1:0; } repaint(); }
+
+  // save / share
+  function encode(){ var o={b:bpm,sw:swing,hm:human,d:dir,A:pat.A,B:pat.B,r:rootSemi(),sc:document.getElementById("scale").value}; return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
+  function decode(s){ try{ var o=JSON.parse(decodeURIComponent(escape(atob(s)))); if(o.A)pat.A=o.A; if(o.B)pat.B=o.B; if(o.b){bpm=o.b;document.getElementById("bpm").value=bpm;document.getElementById("bpmv").textContent=bpm;} if(o.sw!=null){swing=o.sw;document.getElementById("sw").value=swing;document.getElementById("swv").textContent=swing;} if(o.hm!=null){human=o.hm;document.getElementById("hm").value=human;document.getElementById("hmv").textContent=human;} if(o.d){dir=o.d;document.getElementById("dir").value=dir;} if(o.sc)document.getElementById("scale").value=o.sc; repaint(); buildKeys(); return true; }catch(e){ return false; } }
+  function msg(t){ var m=document.getElementById("msg"); m.textContent=t; setTimeout(function(){ m.textContent="Compton Tech Week · The Beat Relay"; },2200); }
+
   function wire(){
-    document.getElementById("play").addEventListener("click",function(){ playing?stop():start(); });
-    document.getElementById("bpm").addEventListener("input",function(e){ bpm=+e.target.value; document.getElementById("bpmv").textContent=bpm; });
-    document.getElementById("sw").addEventListener("input",function(e){ swing=+e.target.value; document.getElementById("swv").textContent=swing; });
-    document.getElementById("master").addEventListener("input",function(e){ document.getElementById("mv").textContent=e.target.value; if(master) master.gain.value=e.target.value/100; });
-    document.getElementById("cut").addEventListener("input",function(e){ var v=+e.target.value; if(filter) filter.frequency.value=v; document.getElementById("cutv").textContent = v>=15500?"full":Math.round(v)+"Hz"; });
-    document.getElementById("dly").addEventListener("input",function(e){ var v=+e.target.value; if(delayGain) delayGain.gain.value=v/100*0.6; document.getElementById("dlyv").textContent=v; });
-    document.querySelectorAll("[data-preset]").forEach(function(b){ b.addEventListener("click",function(){ applyPreset(b.getAttribute("data-preset")); }); });
-    document.getElementById("rand").addEventListener("click",randomize);
-    document.getElementById("clear").addEventListener("click",function(){ applyPreset("__none__"); });
+    document.getElementById("play").onclick=function(){ playing?stop():start(); };
+    document.getElementById("bpm").oninput=function(e){ bpm=+e.target.value; document.getElementById("bpmv").textContent=bpm; };
+    document.getElementById("sw").oninput=function(e){ swing=+e.target.value; document.getElementById("swv").textContent=swing; };
+    document.getElementById("hm").oninput=function(e){ human=+e.target.value; document.getElementById("hmv").textContent=human; };
+    document.getElementById("master").oninput=function(e){ document.getElementById("mv").textContent=e.target.value; if(master)master.gain.value=e.target.value/100; };
+    document.getElementById("cut").oninput=function(e){ var v=+e.target.value; if(filter)filter.frequency.value=v; document.getElementById("cutv").textContent=v>=15500?"full":Math.round(v)+"Hz"; };
+    document.getElementById("dly").oninput=function(e){ var v=+e.target.value; if(echoSend)echoSend.gain.value=v/100*.6; document.getElementById("dlyv").textContent=v; };
+    document.getElementById("rv").oninput=function(e){ var v=+e.target.value; if(rvSend)rvSend.gain.value=v/100*.9; document.getElementById("rvv").textContent=v; };
+    document.getElementById("gl").oninput=function(e){ setGlue(+e.target.value); document.getElementById("glv").textContent=e.target.value; };
+    document.getElementById("wm").oninput=function(e){ setWarmth(+e.target.value); document.getElementById("wmv").textContent=e.target.value; };
+    document.getElementById("dir").onchange=function(e){ dir=e.target.value; };
+    document.getElementById("pA").onclick=function(){ page="A"; this.classList.add("on"); document.getElementById("pB").classList.remove("on"); repaint(); };
+    document.getElementById("pB").onclick=function(){ page="B"; this.classList.add("on"); document.getElementById("pA").classList.remove("on"); repaint(); };
+    document.getElementById("copyab").onclick=function(){ pat.B=JSON.parse(JSON.stringify(pat.A)); msg("Copied A → B"); if(page==="B")repaint(); };
+    document.getElementById("root").onchange=buildKeys; document.getElementById("scale").onchange=buildKeys;
+    document.querySelectorAll("[data-preset]").forEach(function(b){ b.onclick=function(){ applyPreset(b.getAttribute("data-preset")); }; });
+    document.getElementById("rand").onclick=randomize; document.getElementById("clear").onclick=function(){ pat[page]=blank(); repaint(); };
+    document.getElementById("save").onclick=function(){ try{ localStorage.setItem("ctwbeat",encode()); msg("Saved to this device ✓"); }catch(e){ msg("Couldn't save"); } };
+    document.getElementById("share").onclick=function(){ var url=location.origin+location.pathname+"#"+encode(); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(function(){ msg("Link copied ✓"); },function(){ location.hash=encode(); msg("Link in address bar"); }); } else { location.hash=encode(); msg("Link in address bar"); } };
+    // tap tempo
+    var taps=[]; document.getElementById("tap").onclick=function(){ var now=performance.now(); taps.push(now); taps=taps.filter(function(t){return now-t<2000;}); if(taps.length>=2){ var d=0; for(var i=1;i<taps.length;i++)d+=taps[i]-taps[i-1]; d/=taps.length-1; var b=Math.round(60000/d); b=Math.max(60,Math.min(180,b)); bpm=b; document.getElementById("bpm").value=b; document.getElementById("bpmv").textContent=b; } };
   }
 
-  buildGrid(); buildMixer(); wire(); applyPreset("four"); drawViz();
+  function viz(){ requestAnimationFrame(viz); var cv=document.getElementById("viz"),cx=cv.getContext("2d"); cx.clearRect(0,0,cv.width,cv.height); if(!analyser)return; var n=analyser.frequencyBinCount,data=new Uint8Array(n); analyser.getByteFrequencyData(data); var bw=cv.width/n; for(var i=0;i<n;i++){ var h=(data[i]/255)*cv.height; cx.fillStyle="hsl("+(24+i/n*60)+",90%,"+(45+data[i]/255*20)+"%)"; cx.fillRect(i*bw,cv.height-h,bw-1,h); } }
+
+  buildRoot(); buildGrid(); buildMix(); buildKeys(); wire();
+  if(location.hash.length>2 && decode(location.hash.slice(1))){} else applyPreset("four");
+  viz();
 })();
 </script>
 </body>
