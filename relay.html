@@ -214,7 +214,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const APP_VERSION = "v4";   // ← bump this each time we edit the app
+const APP_VERSION = "v5";   // ← bump this each time we edit the app
 const FRAME = "Add exactly this one feature to my drum machine and give me back the complete updated file, keeping everything else working exactly as it is:\n\n";
 const CODE_TAIL = "\n\nHere is the group's complete current file. Update THIS exact file and give the whole thing back as one file:\n\n";
 const MAX_CODE = 900000; // Firestore doc limit is ~1 MiB; keep a safety margin
@@ -467,6 +467,10 @@ async function saveBuild(){
   const code=document.getElementById("buildCode").value.trim();
   const live=document.getElementById("cbLive");
   if(!code){ live.textContent = "Paste the updated HTML your chat gave you first."; return; }
+  if(!/<\s*(!doctype|html|head|body|div|button|script|style|svg|canvas|main|section|h1)/i.test(code)){
+    live.textContent = "⚠️ That doesn't look like the app's code. Copy the CODE from your Claude artifact (it starts with <!DOCTYPE html>) — not the words on the screen — then paste it here.";
+    return;
+  }
   if(code.length > MAX_CODE){ live.textContent = "That file is too big to store (over ~900 KB). Ask your chat to remove any embedded audio/images and keep it code-only."; return; }
   const newVer = (liveBuildCount || 0) + 1;
   try{
