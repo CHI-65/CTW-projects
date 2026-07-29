@@ -164,7 +164,7 @@ function renderGroups(){
         const isCur = b.version === cur;
         html += `<div class="bd${isCur?' cur':''}">`
           + `<span class="bv">v${b.version}${isCur?' · current':''}</span>`
-          + `<a href="${esc(b.link)}" target="_blank">open</a>`
+          + (b.code? `<button class="mini-act" data-play="${esc(g.id)}|${b.version}">▶ play</button>` : `<span class="muted">(no code)</span>`)
           + `<span class="muted">${esc(b.by||'')}${b.at?(' · '+fmt(b.at)):''}</span>`
           + (isCur? `` : `<button class="mini-act" data-restore="${esc(g.id)}|${b.version}">restore this</button>`)
           + `</div>`;
@@ -175,18 +175,29 @@ function renderGroups(){
   }
   box.innerHTML=html;
 }
-async function restoreVersion(gid, version, link){
+async function restoreVersion(gid, version, code){
   if(!window.confirm("Restore this group to v"+version+" and free the baton?")) return;
-  try{ await setDoc(doc(db,"groups",gid), { buildLink:link, currentVersion:version, updatedAt:serverTimestamp(), updatedBy:"↩ restored to v"+version+" (moderator)", batonUid:"", batonName:"" }, {merge:true}); }
+  try{ await setDoc(doc(db,"groups",gid), { buildCode:code, currentVersion:version, updatedAt:serverTimestamp(), updatedBy:"↩ restored to v"+version+" (moderator)", batonUid:"", batonName:"" }, {merge:true}); }
   catch(e){ alert("Restore failed: "+(e.code||e.message)); }
 }
 async function freeBaton(gid){
   try{ await setDoc(doc(db,"groups",gid), { batonUid:"", batonName:"" }, {merge:true}); }
   catch(e){ alert("Couldn't free baton: "+(e.code||e.message)); }
 }
+// Render a stored build's code in a fresh tab (no publishing involved).
+function playCode(code){
+  if(!code) return;
+  const w = window.open("", "_blank");
+  if(w && w.document){ w.document.open(); w.document.write(code); w.document.close(); return; }
+  const url = URL.createObjectURL(new Blob([code], {type:"text/html"}));
+  const a = document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+}
 document.getElementById("groups").addEventListener("click", async (e)=>{
-  const r=e.target.closest("[data-restore]"), f=e.target.closest("[data-free]");
-  if(r){ const [gid,ver]=r.dataset.restore.split("|"); const b=(buildsData[gid]||[]).find(x=>String(x.version)===ver); if(b) await restoreVersion(gid, Number(ver), b.link); }
+  const p=e.target.closest("[data-play]"), r=e.target.closest("[data-restore]"), f=e.target.closest("[data-free]");
+  if(p){ const [gid,ver]=p.dataset.play.split("|"); const b=(buildsData[gid]||[]).find(x=>String(x.version)===ver); if(b) playCode(b.code); }
+  else if(r){ const [gid,ver]=r.dataset.restore.split("|"); const b=(buildsData[gid]||[]).find(x=>String(x.version)===ver); if(b) await restoreVersion(gid, Number(ver), b.code); }
   else if(f){ await freeBaton(f.dataset.free); }
 });
 

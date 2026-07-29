@@ -1,7 +1,7 @@
 rules_version = '2';
 // Beat Relay security rules.
-// - groups/{group}: the shared "current build" link + meta. Any signed-in user may
-//   read (so group members see their build) and write (update the link).
+// - groups/{group}: the shared "current build" CODE + meta. Any signed-in user may
+//   read (so group members see/play their build) and write (upload a new version).
 // - attendees/{uid}: name + EMAIL + group. The owner writes only their own record;
 //   ONLY the moderator can read it (protects everyone's email / the roster).
 // - activity/{id}: the who-did-what log. Any signed-in user may add an entry;
@@ -17,12 +17,12 @@ service cloud.firestore {
     match /groups/{group} {
       allow read:   if signedIn();
       allow create: if signedIn();
-      // Baton safeguard: anyone may take/pass the baton (writes not changing buildLink),
-      // but changing the build link requires HOLDING the baton — or being the moderator
+      // Baton safeguard: anyone may take/pass the baton (writes not changing buildCode),
+      // but uploading a new build requires HOLDING the baton — or being the moderator
       // (restore-to-a-version / free-the-baton).
       allow update: if signedIn() && (
         isModerator()
-        || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['buildLink'])
+        || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['buildCode'])
         || request.auth.uid == resource.data.batonUid
       );
       allow delete: if isModerator();

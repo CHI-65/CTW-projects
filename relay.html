@@ -43,15 +43,18 @@
   /* current build */
   .cbuild{ border:1.5px solid var(--acc2); border-radius:13px; background:var(--card); padding:13px 15px; margin:0 0 16px; }
   .cb-title{ font-weight:800; font-size:14px; margin-bottom:4px; }
-  .cb-sub{ font-size:12px; color:var(--sub); margin-bottom:9px; }
-  .cb-row{ display:flex; gap:7px; }
-  .cb-row input{ flex:1; min-width:0; font:inherit; font-size:13.5px; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:9px; padding:9px 11px; }
-  .cb-row input:disabled{ opacity:.5; }
-  .cb-row button{ font:inherit; font-size:13px; font-weight:700; border:0; border-radius:9px; padding:9px 13px; cursor:pointer; }
-  #saveB{ color:var(--ink); background:var(--card2); border:1px solid var(--line); }
-  #saveB[disabled]{ opacity:.4; cursor:default; }
-  #openB{ color:#1a0a2e; background:var(--acc2); }
-  #openB[disabled]{ opacity:.4; cursor:default; }
+  .cb-sub{ font-size:12px; color:var(--sub); margin-bottom:10px; }
+  .cb-actions{ display:flex; gap:7px; }
+  .cb-actions button{ flex:1; font:inherit; font-size:13.5px; font-weight:700; border:0; border-radius:9px; padding:11px; cursor:pointer; }
+  #playB{ color:#1a0a2e; background:var(--acc2); }
+  #playB[disabled]{ opacity:.4; cursor:default; }
+  #copyBuildB{ color:var(--ink); background:var(--card2); border:1px solid var(--line); }
+  #copyBuildB[disabled]{ opacity:.4; cursor:default; }
+  #copyBuildB.done{ background:var(--ok); color:#12240a; border-color:var(--ok); }
+  #uploadRow{ margin-top:11px; }
+  #uploadRow .ul{ font-size:12px; font-weight:700; color:var(--ok); margin-bottom:6px; }
+  #buildCode{ width:100%; min-height:88px; resize:vertical; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; line-height:1.4; color:var(--ink); background:var(--card2); border:1px solid var(--line); border-radius:9px; padding:10px 11px; }
+  #saveB{ width:100%; margin-top:8px; font:inherit; font-size:14px; font-weight:800; color:#2a1500; background:var(--acc); border:0; border-radius:9px; padding:12px; cursor:pointer; }
   .cb-live{ font-size:11.5px; color:var(--ok); margin-top:8px; min-height:15px; }
   /* baton / waiting-room buzzer */
   .batonzone{ text-align:center; border:1.5px solid var(--line); border-radius:14px; background:var(--card); padding:16px 15px; margin:0 0 18px; }
@@ -125,14 +128,18 @@
 
   <!-- RELAY ROOM (waiting room + baton buzzer + build) -->
   <section class="screen" id="options">
-    <!-- current build — everyone can Open; only the baton-holder can upload -->
+    <!-- current build — anyone can Play/Copy; only the baton-holder can upload -->
     <div class="cbuild">
       <div class="cb-title">🎧 <span id="cbGroup">Your group</span>'s current build</div>
-      <div class="cb-sub" id="cbSub">Everyone can tap Open to jam on the latest. Only whoever holds the baton can upload a new version.</div>
-      <div class="cb-row">
-        <input id="buildLink" placeholder="the builder pastes the new link here…" inputmode="url" disabled>
-        <button id="saveB" onclick="saveBuild()" disabled>Save</button>
-        <button id="openB" onclick="openBuild()" disabled>Open ↗</button>
+      <div class="cb-sub">Tap ▶ Play to jam on the latest — anyone can. Only whoever holds the baton can upload the next version.</div>
+      <div class="cb-actions">
+        <button id="playB" onclick="playBuild()" disabled>▶ Play the beat</button>
+        <button id="copyBuildB" onclick="copyBuild(this)" disabled>⧉ Copy the code</button>
+      </div>
+      <div id="uploadRow" style="display:none">
+        <div class="ul">⬆ You're the builder — paste your finished file here:</div>
+        <textarea id="buildCode" placeholder="Paste the complete updated HTML your Claude chat gave you, then tap Upload…"></textarea>
+        <button id="saveB" onclick="saveBuild()">⬆ Upload this version</button>
       </div>
       <div class="cb-live" id="cbLive"></div>
     </div>
@@ -149,7 +156,7 @@
     <div id="firstBuild" style="display:none">
       <span class="step-label">Step 1 · You're the first builder</span>
       <h2>Build the base machine</h2>
-      <p class="lede">You grabbed the baton first, so you create the drum machine everyone else will upgrade. Open a new Claude chat, paste this, then bring the link back here and tap <b>Save</b>.</p>
+      <p class="lede">You grabbed the baton first, so you create the drum machine everyone else will upgrade. Open a new Claude chat, paste this, then paste the file Claude gives you into the box up top and tap <b>Upload</b>.</p>
       <div class="card">
         <div class="promptbox" id="basePrompt"></div>
         <button class="copy" data-raw onclick="copyEl('#basePrompt', this)">Copy the prompt</button>
@@ -193,6 +200,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const FRAME = "Add exactly this one feature to my drum machine and give me back the complete updated file, keeping everything else working exactly as it is:\n\n";
+const CODE_TAIL = "\n\nHere is the group's complete current file. Update THIS exact file and give the whole thing back as one file:\n\n";
+const MAX_CODE = 900000; // Firestore doc limit is ~1 MiB; keep a safety margin
 const TREE = window.RELAY_TREE, FINAL = window.RELAY_FINAL, GOBACK = window.RELAY_GOBACK;
 const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const groupId = g => (g||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "group";
@@ -204,7 +213,7 @@ TREE.forEach(t => { if(!t.everyone) t.branches.forEach(b => MAP[t.id+"|"+b.id] =
 // state
 let me = { uid:null, name:null, email:null, group:null, gid:null };
 let added = JSON.parse(localStorage.getItem("ctw_added") || "[]");
-let liveBuild = "";
+let liveCode = "";
 let buildUnsub = null;
 let batonHolderUid = "";
 let batonHolderName = "";
@@ -262,9 +271,10 @@ async function switchAttendee(){
   try{ if(buildUnsub){ buildUnsub(); buildUnsub=null; } await signOut(auth); }catch(e){}
   me = { uid:null, name:null, email:null, group:null, gid:null };
   added = []; localStorage.removeItem("ctw_added");
-  liveBuild = ""; batonHolderUid = ""; batonHolderName = ""; liveBuildCount = 0;
+  liveCode = ""; batonHolderUid = ""; batonHolderName = ""; liveBuildCount = 0;
   document.getElementById("inName").value = "";
   document.getElementById("inEmail").value = "";
+  document.getElementById("buildCode").value = "";
   document.getElementById("who").textContent = "";
   document.getElementById("signinErr").textContent = "";
   document.getElementById("joinBtn").disabled = false;
@@ -277,19 +287,15 @@ function watchBuild(){
   if(buildUnsub) buildUnsub();
   buildUnsub = onSnapshot(doc(db,"groups",me.gid), snap=>{
     const d = snap.exists() ? snap.data() : {};
-    liveBuild = d.buildLink || "";
+    liveCode = d.buildCode || "";
     liveBuildCount = d.buildCount || 0;
     batonHolderUid = d.batonUid || "";
     batonHolderName = d.batonName || "";
-    // keep the current-build row + version line fresh
-    const inp=document.getElementById("buildLink");
-    const iHave = batonHolderUid && batonHolderUid === me.uid;
-    if(document.activeElement!==inp) inp.value = liveBuild;
-    inp.disabled = !iHave;
-    document.getElementById("saveB").disabled = !iHave;
-    document.getElementById("openB").disabled = !liveBuild;
+    // Play/Copy available to everyone whenever a build exists
+    document.getElementById("playB").disabled = !liveCode;
+    document.getElementById("copyBuildB").disabled = !liveCode;
     const live=document.getElementById("cbLive");
-    if(liveBuild){ const by=d.updatedBy; const v=d.currentVersion; live.textContent = "● live" + (v?(" · v"+v):"") + (by?(" · "+by):""); }
+    if(liveCode){ const by=d.updatedBy; const v=d.currentVersion; live.textContent = "● live" + (v?(" · v"+v):"") + (by?(" · "+by):""); }
     else live.textContent = "";
     renderHub();
   }, err=>{ document.getElementById("cbLive").textContent = "(offline)"; });
@@ -298,7 +304,8 @@ function watchBuild(){
 // Decide what the relay room shows: buzzer (free), waiting room (someone else building),
 // first-builder base prompt, or the upgrade menu — based on who holds the baton + build state.
 function renderHub(){
-  if(document.getElementById("options") && !document.getElementById("options").classList.contains("on")) return;
+  const opt=document.getElementById("options");
+  if(opt && !opt.classList.contains("on")) return;
   const iHave  = batonHolderUid && batonHolderUid === me.uid;
   const held   = !!batonHolderUid;
   const hasBuild = liveBuildCount > 0;
@@ -311,38 +318,35 @@ function renderHub(){
 
   status.className = "bz-status";
   buzzer.className = "buzzer";
+  document.getElementById("uploadRow").style.display = iHave ? "block" : "none";
 
   if(iHave){
-    // I'm the builder
     passBtn.style.display = "block";
     buzzer.style.display = "none";
     status.classList.add("mine");
     if(hasBuild){
       status.textContent = "🎽 You've got the baton — you're up!";
-      note.textContent = "Add one upgrade below, paste the new link up top, and tap Save. That shares it and frees the baton for the next person.";
+      note.textContent = "Pick one upgrade below. Its Copy button already includes your group's current build, so paste it into a brand-new Claude chat, then paste the file you get back into the box up top and tap Upload.";
       first.style.display = "none";
       upgrade.style.display = "block";
       renderOptions();
     } else {
       status.textContent = "🎽 You've got the baton — you're the first builder!";
-      note.textContent = "Build the base machine below, then paste its link up top and tap Save.";
+      note.textContent = "Build the base machine below, then paste the file Claude gives you into the box up top and tap Upload.";
       first.style.display = "block";
       upgrade.style.display = "none";
     }
   } else {
-    // I'm waiting
     passBtn.style.display = "none";
     buzzer.style.display = "block";
     first.style.display = "none";
     upgrade.style.display = "none";
     if(held){
-      // someone else is building — the waiting room
       status.textContent = "🎽 " + (batonHolderName||"Someone") + " is building right now.";
       buzzer.classList.add("locked");
       buzzer.textContent = "🔒 Baton in use — get ready…";
-      note.textContent = "You're in the waiting room. Tap Open above to jam on the current build. The moment they upload, the baton is up for grabs — be the first to tap!";
+      note.textContent = "You're in the waiting room. Tap ▶ Play above to jam on the current build. The moment they upload, the baton is up for grabs — be the first to tap!";
     } else {
-      // baton is free — Family Feud moment
       status.classList.add("free");
       status.textContent = "🎽 The baton is UP FOR GRABS!";
       buzzer.classList.add("live");
@@ -377,18 +381,33 @@ async function passBaton(){
 }
 async function saveBuild(){
   if(!me.gid || batonHolderUid !== me.uid) return;   // only the baton holder can upload
-  const link=document.getElementById("buildLink").value.trim();
-  if(!link) return;
+  const code=document.getElementById("buildCode").value.trim();
+  const live=document.getElementById("cbLive");
+  if(!code){ live.textContent = "Paste the updated HTML your chat gave you first."; return; }
+  if(code.length > MAX_CODE){ live.textContent = "That file is too big to store (over ~900 KB). Ask your chat to remove any embedded audio/images and keep it code-only."; return; }
   const newVer = (liveBuildCount || 0) + 1;
   try{
     // 1) append an immutable version to history — no build is ever overwritten
-    await addDoc(collection(db,"groups",me.gid,"builds"), { version:newVer, link, by:me.name, uid:me.uid, at:serverTimestamp() });
+    await addDoc(collection(db,"groups",me.gid,"builds"), { version:newVer, code, by:me.name, uid:me.uid, at:serverTimestamp() });
     // 2) point the group at the new version AND free the baton for the next person
-    await setDoc(doc(db,"groups",me.gid), { buildLink:link, buildCount:newVer, currentVersion:newVer, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name, batonUid:"", batonName:"" }, {merge:true});
-    document.getElementById("cbLive").textContent = "✅ Uploaded v"+newVer+" — baton freed for the next builder!";
-  }catch(e){ document.getElementById("cbLive").textContent = "couldn't save ("+(e.code||"error")+")"; }
+    await setDoc(doc(db,"groups",me.gid), { buildCode:code, buildCount:newVer, currentVersion:newVer, group:me.group, updatedAt:serverTimestamp(), updatedBy:me.name, batonUid:"", batonName:"" }, {merge:true});
+    document.getElementById("buildCode").value = "";
+    live.textContent = "✅ Uploaded v"+newVer+" — baton freed for the next builder!";
+  }catch(e){ live.textContent = "couldn't upload ("+(e.code||"error")+")"; }
 }
-function openBuild(){ if(liveBuild) window.open(liveBuild,"_blank"); }
+
+// Play the current build by rendering its code in a fresh tab (no publishing needed).
+function playBuild(){
+  if(!liveCode) return;
+  const w = window.open("", "_blank");
+  if(w && w.document){ w.document.open(); w.document.write(liveCode); w.document.close(); return; }
+  // popup blocked → fall back to a Blob URL opened via a tapped link (keeps the user gesture)
+  const url = URL.createObjectURL(new Blob([liveCode], {type:"text/html"}));
+  const a = document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+}
+function copyBuild(btn){ if(liveCode) doCopy(liveCode, btn); }
 
 // ---- copy ----
 function flash(btn){ const t=btn.textContent; btn.textContent="Copied!"; btn.classList.add("done"); setTimeout(()=>{btn.textContent=t; btn.classList.remove("done");},1400); }
@@ -397,6 +416,8 @@ function doCopy(text, btn){
 }
 function fb(text, btn){ const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy"); flash(btn);}catch(e){} document.body.removeChild(ta); }
 function copyEl(sel, btn){ const el=document.querySelector(sel); const raw=btn.hasAttribute("data-raw"); doCopy(raw?el.textContent:FRAME+el.textContent, btn); }
+// bundle a prompt with the group's current code so one paste upgrades the real file
+function chatPaste(promptText){ return liveCode ? (FRAME + promptText + CODE_TAIL + liveCode) : (FRAME + promptText); }
 
 // ---- options ----
 function isAdded(k){ return added.includes(k); }
@@ -421,14 +442,14 @@ function renderOptions(){
 function openDetail(key){
   const mark=document.getElementById("dMark");
   if(key==="FINAL"){
-    setDetail("🏁 Share your beat","Everyone · the finish line","The last step for everyone: turn your beat into a link you can share. Paste this in your chat.", FINAL.prompt, FRAME+FINAL.prompt, "");
+    setDetail("🏁 Share your beat","Everyone · the finish line","The last step: turn your beat into something you can share. Copy includes your current build, so paste it into a fresh chat.", FINAL.prompt, chatPaste(FINAL.prompt), "");
     mark.style.display="none";
   } else if(key==="GOBACK"){
-    setDetail("🔙 Go back to the last working version","When an upgrade breaks the app","Dead ends happen — part of it. Paste this right after something breaks. (Or restore an earlier version from the chat's history.)", GOBACK, GOBACK, "");
+    setDetail("🔙 Go back to the last working version","When an upgrade breaks the app","Dead ends happen — part of it. Paste this right after something breaks. (Or ask the moderator to restore an earlier version — every upload is saved.)", GOBACK, GOBACK, "");
     mark.style.display="none";
   } else {
     const {b}=MAP[key];
-    setDetail(b.name, b.badges.replace(/·/g," · "), "Paste this to add it. Copy includes a safety wrapper so nothing else breaks.", b.prompt, FRAME+b.prompt, b.teach||"");
+    setDetail(b.name, b.badges.replace(/·/g," · "), "Paste this into a brand-new Claude chat — it already includes your group's current build, so Claude upgrades the real file.", b.prompt, chatPaste(b.prompt), b.teach||"");
     mark.style.display="block";
     updateMark(key);
     mark.onclick=()=>toggleAdded(key, b.name);
@@ -464,7 +485,7 @@ function toggleAdded(key, label){
 onAuthStateChanged(auth, u=>{ if(u) me.uid = me.uid || u.uid; });
 
 // expose handlers for inline onclick
-Object.assign(window, { show, toggleTheme, doSignIn, switchAttendee, grabBaton, passBaton, copyEl, saveBuild, openBuild, openDetail });
+Object.assign(window, { show, toggleTheme, doSignIn, switchAttendee, grabBaton, passBaton, copyEl, saveBuild, playBuild, copyBuild, openDetail });
 </script>
 </body>
 </html>
