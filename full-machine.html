@@ -23,6 +23,13 @@
   .btn{ font:inherit; font-size:12.5px; font-weight:700; color:var(--ink); background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:8px 12px; cursor:pointer; }
   .btn.on{ color:#2a1500; background:var(--acc); border-color:var(--acc); }
   .btn.acc2.on{ background:var(--acc2); border-color:var(--acc2); color:#1a0a2e; }
+  .switches{ display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin:0 0 12px; }
+  .sw{ font:inherit; font-size:12.5px; font-weight:800; color:var(--sub); background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:9px 13px; cursor:pointer; }
+  .sw.on{ color:#2a1500; background:var(--acc); border-color:var(--acc); }
+  .sw.mode{ margin-left:auto; color:var(--acc2); border-color:color-mix(in srgb,var(--acc2) 45%,var(--line)); }
+  .sw.mode.on{ color:#1a0a2e; background:var(--acc2); border-color:var(--acc2); }
+  .collapsible{ display:none; }
+  .collapsible.open{ display:block; }
   .btn:active{ transform:translateY(1px); }
   canvas#viz{ width:100%; height:52px; display:block; background:var(--panel2); border-radius:10px; margin-top:10px; }
   .grid{ display:flex; flex-direction:column; gap:6px; }
@@ -81,9 +88,18 @@
     <canvas id="viz" width="760" height="52"></canvas>
   </div>
 
+  <div class="switches">
+    <button class="sw" data-panel="pMel">🎹 Melody</button>
+    <button class="sw" data-panel="pFx">🎛 FX &amp; Master</button>
+    <button class="sw" data-panel="pMix">🎚 Mixer</button>
+    <button class="sw" data-panel="pTools">💾 Kit &amp; Save</button>
+    <button class="sw mode" id="modeBtn" title="Switch: keep several panels open · Toggle: one at a time">Switch mode</button>
+  </div>
   <div class="panel">
     <div class="grid" id="grid"></div>
-    <div class="ph" style="margin:12px 0 6px">Melody — bass keyboard</div>
+  </div>
+  <div class="panel collapsible" id="pMel">
+    <div class="ph">Melody — bass keyboard</div>
     <div class="rowflex">
       <label class="ctl" style="flex-direction:row;align-items:center;gap:6px">Key <select id="root"></select></label>
       <label class="ctl" style="flex-direction:row;align-items:center;gap:6px">Scale <select id="scale"><option value="major">Major</option><option value="minor" selected>Minor</option><option value="penta">Pentatonic</option><option value="chrom">Chromatic</option></select></label>
@@ -91,7 +107,7 @@
     <div class="keys" id="keys"></div>
   </div>
 
-  <div class="panel">
+  <div class="panel collapsible" id="pFx">
     <div class="ph">Filter · Echo feedback</div>
     <div class="fx">
       <label class="ctl">Filter cutoff <span class="v"><span id="cutv">full</span></span><input type="range" id="cut" min="200" max="16000" value="16000"></label>
@@ -106,12 +122,12 @@
     </div>
   </div>
 
-  <div class="panel">
-    <div class="ph">Mixer — volume · mute (M) · solo (S)</div>
+  <div class="panel collapsible" id="pMix">
+    <div class="ph">Mixer — vol · → echo · → verb · mute (M) · solo (S)</div>
     <div class="mix" id="mix"></div>
   </div>
 
-  <div class="panel">
+  <div class="panel collapsible" id="pTools">
     <div class="rowflex">
       <button class="btn" data-preset="four">Four-on-floor</button>
       <button class="btn" data-preset="boom">Boom-bap</button>
@@ -291,7 +307,17 @@
     document.getElementById("save").onclick=function(){ try{ localStorage.setItem("ctwbeat",encode()); msg("Saved to this device ✓"); }catch(e){ msg("Couldn't save"); } };
     document.getElementById("share").onclick=function(){ var url=location.origin+location.pathname+"#"+encode(); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(function(){ msg("Link copied ✓"); },function(){ location.hash=encode(); msg("Link in address bar"); }); } else { location.hash=encode(); msg("Link in address bar"); } };
     // tap tempo
-    var taps=[]; document.getElementById("tap").onclick=function(){ var now=performance.now(); taps.push(now); taps=taps.filter(function(t){return now-t<2000;}); if(taps.length>=2){ var d=0; for(var i=1;i<taps.length;i++)d+=taps[i]-taps[i-1]; d/=taps.length-1; var b=Math.round(60000/d); b=Math.max(60,Math.min(180,b)); bpm=b; document.getElementById("bpm").value=b; document.getElementById("bpmv").textContent=b; } };
+    var taps=[]; document.getElementById("tap").onclick=function(){ var now=performance.now(); taps.push(now); taps=taps.filter(function(t){return now-t<2000;}); if(taps.length>=2){ var d=0; for(var i=1;i<taps.length;i++)d+=taps[i]-taps[i-1]; d/=taps.length-1; var b=Math.round(60000/d); b=Math.max(60,Math.min(180,b)); bpm=b; document.getElementById("bpm").value=b; document.getElementById("bpmv").textContent=b; if(delay)delay.delayTime.value=60/bpm/2; } };
+    // panel show/hide switches — switch mode: many open at once · toggle mode: one at a time
+    var toggleMode=false, lastOpened=null;
+    function openPanel(id,on){ var p=document.getElementById(id); if(!p)return; p.classList.toggle("open",on); var b=document.querySelector('.sw[data-panel="'+id+'"]'); if(b)b.classList.toggle("on",on); if(on){ lastOpened=id; p.scrollIntoView({behavior:"smooth",block:"nearest"}); } }
+    function syncSw(){ document.querySelectorAll(".sw[data-panel]").forEach(function(s){ var p=document.getElementById(s.getAttribute("data-panel")); s.classList.toggle("on", !!(p&&p.classList.contains("open"))); }); }
+    document.querySelectorAll(".sw[data-panel]").forEach(function(b){ b.onclick=function(){ var id=b.getAttribute("data-panel"); var isOpen=document.getElementById(id).classList.contains("open");
+      if(toggleMode){ document.querySelectorAll(".collapsible").forEach(function(p){ p.classList.remove("open"); }); document.querySelectorAll(".sw[data-panel]").forEach(function(x){ x.classList.remove("on"); }); if(!isOpen) openPanel(id,true); }
+      else { openPanel(id,!isOpen); } }; });
+    document.getElementById("modeBtn").onclick=function(){ toggleMode=!toggleMode; this.textContent=toggleMode?"Toggle mode":"Switch mode"; this.classList.toggle("on",toggleMode);
+      if(toggleMode){ var keep=(lastOpened && document.getElementById(lastOpened) && document.getElementById(lastOpened).classList.contains("open")) ? lastOpened : (document.querySelector(".collapsible.open") ? document.querySelector(".collapsible.open").id : null);
+        document.querySelectorAll(".collapsible").forEach(function(p){ if(p.id!==keep) p.classList.remove("open"); }); syncSw(); } };
   }
 
   function viz(){ requestAnimationFrame(viz); var cv=document.getElementById("viz"),cx=cv.getContext("2d"); cx.clearRect(0,0,cv.width,cv.height); if(!analyser)return; var n=analyser.frequencyBinCount,data=new Uint8Array(n); analyser.getByteFrequencyData(data); var bw=cv.width/n; for(var i=0;i<n;i++){ var h=(data[i]/255)*cv.height; cx.fillStyle="hsl("+(24+i/n*60)+",90%,"+(45+data[i]/255*20)+"%)"; cx.fillRect(i*bw,cv.height-h,bw-1,h); } }
