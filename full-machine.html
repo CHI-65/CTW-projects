@@ -41,11 +41,11 @@
   .tg.m.on{ color:#2a1500; background:var(--acc); border-color:var(--acc); }
   .tg.s.on{ color:#12240a; background:var(--ok); border-color:var(--ok); }
   .steps{ display:grid; grid-template-columns:repeat(16,1fr); gap:2px; }
-  .cell{ height:24px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); cursor:pointer; }
+  .cell{ height:24px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); cursor:pointer; transition:transform .07s ease; }
   .cell.b{ background:#2b2517; }
   .cell.on{ background:var(--acc); border-color:var(--acc); }
   .cell.acc{ background:var(--ok); border-color:var(--ok); box-shadow:inset 0 0 0 2px #fff6; }
-  .cell.play{ box-shadow:0 0 0 2px var(--acc2); }
+  .grid.mag .cell.play{ box-shadow:0 0 0 2px var(--acc2); transform:scale(1.28); position:relative; z-index:3; }
   @media (min-width:820px){ .cell{ height:22px; } }
   /* mixer — vertical channel strips */
   .mix{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
@@ -93,6 +93,7 @@
       <label class="ctl">Swing <span class="v"><span id="swv">0</span>%</span><input type="range" id="sw" min="0" max="60" value="0"></label>
       <label class="ctl">Humanize <span class="v"><span id="hmv">0</span>%</span><input type="range" id="hm" min="0" max="100" value="0"></label>
       <label class="ctl">Master <span class="v"><span id="mv">80</span></span><input type="range" id="master" min="0" max="100" value="80"></label>
+      <button class="btn" id="magBtn" title="Magnify the current step as it plays (off by default)">🔍</button>
     </div>
     <div class="rowflex" style="margin-top:10px">
       <span class="ctl" style="flex-direction:row;align-items:center;gap:6px">Pattern
@@ -260,7 +261,7 @@
   }
 
   // scheduler
-  var playing=false,idx=0,dirState=1,nextT=0,timer=null,bpm=96,swing=0,human=0,dir="fwd";
+  var playing=false,idx=0,dirState=1,nextT=0,timer=null,bpm=96,swing=0,human=0,dir="fwd",magnify=false;
   function sd(){ return 60/bpm/4; }
   function anySolo(){ for(var i=0;i<NT;i++) if(solo[i]) return true; return false; }
   function playStep(step,time){
@@ -466,6 +467,7 @@
     document.getElementById("gl").oninput=function(e){ setGlue(+e.target.value); document.getElementById("glv").textContent=e.target.value; };
     document.getElementById("wm").oninput=function(e){ setWarmth(+e.target.value); document.getElementById("wmv").textContent=e.target.value; };
     document.getElementById("dir").onchange=function(e){ dir=e.target.value; };
+    document.getElementById("magBtn").onclick=function(){ magnify=!magnify; document.getElementById("grid").classList.toggle("mag",magnify); this.classList.toggle("on",magnify); };
     document.getElementById("pA").onclick=function(){ page="A"; this.classList.add("on"); document.getElementById("pB").classList.remove("on"); repaint(); };
     document.getElementById("pB").onclick=function(){ page="B"; this.classList.add("on"); document.getElementById("pA").classList.remove("on"); repaint(); };
     document.getElementById("copyab").onclick=function(){ pat.B=JSON.parse(JSON.stringify(pat.A)); msg("Copied A → B"); if(page==="B")repaint(); };
