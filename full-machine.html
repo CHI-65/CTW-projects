@@ -122,6 +122,7 @@
     <div class="ph">Sampler — record your own sound</div>
     <div class="rowflex">
       <button class="btn" id="recBtn">● Record</button>
+      <button class="btn" id="prevBtn" title="hear the sample">▶ Preview</button>
       <button class="btn" id="revBtn" title="play the sample backwards">↺ Reverse</button>
       <button class="btn" id="normBtn" title="lift to full volume">Normalize</button>
       <label class="ctl" style="flex-direction:row;align-items:center;gap:6px">Transpose <span class="v"><span id="sampTrV">0</span></span><input type="range" id="sampTr" min="-12" max="12" value="0"></label>
@@ -190,6 +191,7 @@
   ];
   var NT=TRACKS.length;
   var bassIdx=TRACKS.map(function(t){return t.id;}).indexOf("bass");
+  var sampleIdx=TRACKS.map(function(t){return t.id;}).indexOf("sample");
   function blank(){ return TRACKS.map(function(){ return new Array(STEPS).fill(0); }); } // 0 off,1 on,2 accent
   var pat={ A:blank(), B:blank() }, page="A";
   function P(){ return pat[page]; }
@@ -435,7 +437,16 @@
     if(!sampleBuf){ sampMsg("Record something first."); return; }
     var len=sampleBuf.length, a=Math.floor(trimA*len), b=Math.floor(trimB*len), src=sampleBuf.getChannelData(0), pk=0;
     for(var i=a;i<b;i++){ var v=Math.abs(src[i]); if(v>pk)pk=v; }
-    normGain = pk>0.0001 ? Math.min(8,0.99/pk) : 1; regenPlay(); drawWav(); sampMsg("Normalized to full volume ✓");
+    if(pk<0.0002){ sampMsg("This sample is silent — nothing to normalize."); return; }
+    normGain = Math.min(12, 0.99/pk); regenPlay(); drawWav();
+    var db=20*Math.log10(normGain);
+    if(normGain<=1.03){ sampMsg("Already near full volume (peak "+Math.round(pk*100)+"%). Tap ▶ Preview to hear it."); }
+    else { sampMsg("Normalized ✓ boosted +"+db.toFixed(1)+" dB (peak "+Math.round(pk*100)+"% → 99%). Tap ▶ Preview."); }
+  }
+  function previewSample(){
+    unlock(); if(!ac) build(); if(ac.state==="suspended") ac.resume();
+    if(!samplePlayBuf){ sampMsg("Record something first, then Preview."); return; }
+    if(sampleIdx>=0) trig(sampleIdx, ac.currentTime, 1, false);
   }
 
   // save / share
@@ -461,6 +472,7 @@
     document.getElementById("root").onchange=buildKeys; document.getElementById("scale").onchange=buildKeys;
     // sampler
     document.getElementById("recBtn").onclick=record;
+    document.getElementById("prevBtn").onclick=previewSample;
     document.getElementById("revBtn").onclick=function(){ if(!sampleBuf){ sampMsg("Record something first."); return; } sampRev=!sampRev; this.classList.toggle("on",sampRev); regenPlay(); drawWav(); };
     document.getElementById("normBtn").onclick=normalize;
     document.getElementById("sampTr").oninput=function(e){ sampSemi=+e.target.value; document.getElementById("sampTrV").textContent=(sampSemi>0?"+":"")+sampSemi; };
